@@ -12,19 +12,105 @@ const getSaturdayOfWeek = (d) => {
   return new Date(date.setDate(diff));
 };
 
+// --- New Worker Details Modal Component ---
+const WorkerDetailModal = ({ worker, onClose }) => {
+  if (!worker) return null;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl w-full max-w-sm"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <h3 className="text-2xl font-bold text-gray-800">
+            {worker.fullName}
+          </h3>
+          <p className="text-gray-500">{worker.isMinor ? "Minor" : "Adult"}</p>
+
+          <div className="mt-6 space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-600">Position:</span>
+              <span className="text-gray-800">{worker.title}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-600">Phone:</span>
+              <span className="text-gray-800">
+                {worker.phone || "Not provided"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-600">
+                Years of Service:
+              </span>
+              <span className="text-gray-800">{worker.yos ?? "N/A"}</span>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-b-lg text-right">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Reusable Worker Row Component for cleaner code ---
+const WorkerRow = ({ worker, scheduleData, onWorkerClick }) => (
+  <tr key={worker.uid} className="even:bg-gray-50">
+    <td
+      className="p-2 border font-medium hover:bg-blue-50 cursor-pointer"
+      onClick={() => onWorkerClick(worker)}
+    >
+      {worker.fullName || worker.email}
+      {worker.isMinor && (
+        <span className="text-gray-500 font-medium ml-1">(M)</span>
+      )}
+      {worker.title && worker.title !== "Lifeguard" && (
+        <div className="text-xs text-gray-500">{worker.title}</div>
+      )}
+    </td>
+    <td className="p-2 border text-center">{worker.yos ?? 0}</td>
+    {["sat", "sun", "mon", "tue", "wed", "thu", "fri"].map((day) => {
+      const shift = scheduleData[worker.uid]?.[day];
+      return (
+        <td
+          key={day}
+          className="p-2 border text-center h-16 hover:bg-blue-50 cursor-pointer"
+        >
+          {shift ? (
+            `${shift.start}-${shift.end} ${shift.type}`
+          ) : (
+            <span className="text-gray-400">-</span>
+          )}
+        </td>
+      );
+    })}
+    <td className="p-2 border text-center font-bold">0</td>
+  </tr>
+);
+
 const ScheduleView = ({ company, workers }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [selectedWorker, setSelectedWorker] = useState(null); // State for the modal
 
-  // Memoize the start date of the current week to prevent unnecessary recalculations
   const weekStartDate = useMemo(
     () => getSaturdayOfWeek(currentDate),
     [currentDate]
   );
 
-  // --- Worker Sorting Logic ---
-  const sortedWorkers = useMemo(() => {
+  // --- Worker Sorting and Grouping Logic ---
+  const { sortedManagersAndGuards, sortedFrontWorkers } = useMemo(() => {
     const titleOrder = {
       "head manager": 1,
       "assistant manager": 2,
@@ -33,24 +119,30 @@ const ScheduleView = ({ company, workers }) => {
       "front worker": 5,
     };
 
-    return [...workers].sort((a, b) => {
+    const sortLogic = (a, b) => {
       const titleA = a.title || "";
       const titleB = b.title || "";
 
-      // If one user is the manager, they come first
       if (a.role === "head manager" && b.role !== "head manager") return -1;
       if (b.role === "head manager" && a.role !== "head manager") return 1;
 
-      // Sort by title order
-      const orderA = titleOrder[titleA] || 99;
-      const orderB = titleOrder[titleB] || 99;
+      const orderA = titleOrder[titleA.toLowerCase()] || 99;
+      const orderB = titleOrder[titleB.toLowerCase()] || 99;
       if (orderA !== orderB) {
         return orderA - orderB;
       }
 
-      // If titles are the same, sort by start year (descending for YOS)
-      return (b.startYear || 0) - (a.startYear || 0);
-    });
+      // Sort by yos descending (most years first)
+      return (b.yos || 0) - (a.yos || 0);
+    };
+
+    const managersAndGuards = workers.filter((w) => w.title !== "Front Worker");
+    const frontWorkers = workers.filter((w) => w.title === "Front Worker");
+
+    return {
+      sortedManagersAndGuards: managersAndGuards.sort(sortLogic),
+      sortedFrontWorkers: frontWorkers.sort(sortLogic),
+    };
   }, [workers]);
 
   // --- Data Fetching Effect ---
@@ -58,7 +150,6 @@ const ScheduleView = ({ company, workers }) => {
     if (!company?.id) return;
     setLoading(true);
 
-    // Format date as YYYY-MM-DD for a consistent document ID
     const weekId = weekStartDate.toISOString().split("T")[0];
     const scheduleDocId = `${company.id}_${weekId}`;
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
@@ -67,7 +158,6 @@ const ScheduleView = ({ company, workers }) => {
       if (docSnap.exists()) {
         setScheduleData(docSnap.data().shifts || {});
       } else {
-        // If no schedule exists for this week, create one
         const initialShifts = {};
         workers.forEach((w) => {
           initialShifts[w.uid] = {
@@ -92,7 +182,7 @@ const ScheduleView = ({ company, workers }) => {
       setLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup listener on component unmount
+    return () => unsubscribe();
   }, [weekStartDate, company, workers]);
 
   const handleWeekChange = (weeks) => {
@@ -129,7 +219,11 @@ const ScheduleView = ({ company, workers }) => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg">
-      {/* Header with Navigation */}
+      <WorkerDetailModal
+        worker={selectedWorker}
+        onClose={() => setSelectedWorker(null)}
+      />
+
       <div className="flex justify-between items-center mb-4">
         <button
           onClick={() => handleWeekChange(-1)}
@@ -149,13 +243,15 @@ const ScheduleView = ({ company, workers }) => {
         </button>
       </div>
 
-      {/* Schedule Grid */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse border">
           <thead>
             <tr className="bg-gray-100">
-              <th className="p-2 border text-left text-sm font-semibold text-gray-600">
-                Worker
+              <th className="p-2 border text-left text-sm font-semibold text-gray-600 min-w-[160px]">
+                Guards & Managers
+              </th>
+              <th className="p-2 border text-sm font-semibold text-gray-600 bg-gray-50">
+                YOS
               </th>
               {renderWeekHeader()}
               <th className="p-2 border text-sm font-semibold text-gray-600 bg-gray-50">
@@ -166,45 +262,51 @@ const ScheduleView = ({ company, workers }) => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="9" className="text-center p-4">
+                <td colSpan="10" className="text-center p-4">
                   Loading schedule...
                 </td>
               </tr>
             ) : (
-              sortedWorkers.map((worker) => (
-                <tr key={worker.uid} className="even:bg-gray-50">
-                  <td className="p-2 border font-medium">
-                    {worker.fullName || worker.email}
-                    {worker.isMinor && (
-                      <span className="text-red-500 font-bold ml-1">(M)</span>
-                    )}
-                    <div className="text-xs text-gray-500">{worker.title}</div>
-                  </td>
-                  {["sat", "sun", "mon", "tue", "wed", "thu", "fri"].map(
-                    (day) => {
-                      const shift = scheduleData[worker.uid]?.[day];
-                      return (
-                        <td
-                          key={day}
-                          className="p-2 border text-center h-16 hover:bg-blue-50 cursor-pointer"
-                        >
-                          {shift ? (
-                            `${shift.start}-${shift.end} ${shift.type}`
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                      );
-                    }
-                  )}
-                  <td className="p-2 border text-center font-bold">
-                    {/* Hour calculation will go here */}0
-                  </td>
-                </tr>
+              sortedManagersAndGuards.map((worker) => (
+                <WorkerRow
+                  key={worker.uid}
+                  worker={worker}
+                  scheduleData={scheduleData}
+                  onWorkerClick={setSelectedWorker}
+                />
               ))
             )}
           </tbody>
         </table>
+
+        {sortedFrontWorkers.length > 0 && (
+          <table className="w-full border-collapse border mt-6">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 border text-left text-sm font-semibold text-gray-600 min-w-[160px]">
+                  Front Workers
+                </th>
+                <th className="p-2 border text-sm font-semibold text-gray-600 bg-gray-50">
+                  YOS
+                </th>
+                {renderWeekHeader()}
+                <th className="p-2 border text-sm font-semibold text-gray-600 bg-gray-50">
+                  Total Hours
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedFrontWorkers.map((worker) => (
+                <WorkerRow
+                  key={worker.uid}
+                  worker={worker}
+                  scheduleData={scheduleData}
+                  onWorkerClick={setSelectedWorker}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

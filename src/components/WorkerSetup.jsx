@@ -8,8 +8,8 @@ import { auth, db } from "../firebase";
 
 const WorkerSetup = () => {
   const [position, setPosition] = useState("Lifeguard");
-  const [startYear, setStartYear] = useState("");
-  const [phone, setPhone] = useState(""); // New state for phone number
+  const [yos, setYos] = useState(""); // Changed from startYear to yos
+  const [phone, setPhone] = useState("");
   const [user, setUser] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,8 +39,8 @@ const WorkerSetup = () => {
       const userDocRef = doc(db, "users", user.uid);
       await updateDoc(userDocRef, {
         title: position,
-        startYear: parseInt(startYear, 10),
-        phone: phone, // Save the phone number
+        phone: phone,
+        yos: parseInt(yos, 10), // Save yos as a number
       });
 
       navigate("/dashboard");
@@ -108,21 +108,21 @@ const WorkerSetup = () => {
 
           <div>
             <label
-              htmlFor="startYear"
+              htmlFor="yos"
               className="block text-gray-700 text-sm font-bold mb-2"
             >
-              Start Year
+              Years of Service
             </label>
             <input
               type="number"
-              id="startYear"
-              value={startYear}
-              onChange={(e) => setStartYear(e.target.value)}
+              id="yos"
+              value={yos}
+              onChange={(e) => setYos(e.target.value)}
               required
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder={new Date().getFullYear().toString()}
-              min="1980"
-              max={new Date().getFullYear()}
+              placeholder="e.g., 3"
+              min="0"
+              max="50"
             />
           </div>
 

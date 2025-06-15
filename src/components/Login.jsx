@@ -3,28 +3,21 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../firebase"; // Make sure this path is correct
+import { collection, query, where, getDocs, limit } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
 const Login = () => {
-  // State hooks for form inputs and error messages
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // Hook for programmatic navigation
   const navigate = useNavigate();
 
-  /**
-   * Handles the form submission for user login.
-   * @param {React.FormEvent} e - The form submission event.
-   */
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent default form submission behavior
-    setError(""); // Clear any previous errors
+    e.preventDefault();
+    setError("");
 
     try {
-      // Use Firebase to sign in the user
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
@@ -32,19 +25,25 @@ const Login = () => {
       );
       const user = userCredential.user;
 
-      // Check if the user has a role defined in Firestore
-      const userDocRef = doc(db, "users", user.uid);
-      const userDocSnap = await getDoc(userDocRef);
+      // CORRECTED LOGIC: Query the 'users' collection to find a document
+      // where the authUid field matches the logged-in user's UID.
+      const q = query(
+        collection(db, "users"),
+        where("authUid", "==", user.uid),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
 
-      if (userDocSnap.exists() && userDocSnap.data().role) {
-        // If user has a role, navigate to the main dashboard
+      if (!querySnapshot.empty) {
+        // A profile exists for this user (they are a manager or have claimed a profile).
+        // Send them to the dashboard.
         navigate("/dashboard");
       } else {
-        // If it's a new user without a role, navigate to role selection
+        // No profile found. This auth account hasn't been linked.
+        // Send them to role selection to start the process.
         navigate("/role-selection");
       }
     } catch (err) {
-      // If there's an error (e.g., wrong password), display it
       setError("Failed to log in. Please check your credentials.");
       console.error("Failed to log in:", err);
     }
@@ -57,16 +56,13 @@ const Login = () => {
           Log In
         </h2>
 
-        {/* Display error messages if any */}
         {error && (
           <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4 text-center">
             {error}
           </p>
         )}
 
-        {/* Login form */}
         <form onSubmit={handleSubmit}>
-          {/* Email Input */}
           <div className="mb-4">
             <label
               htmlFor="email"
@@ -84,8 +80,6 @@ const Login = () => {
               placeholder="you@example.com"
             />
           </div>
-
-          {/* Password Input */}
           <div className="mb-6">
             <label
               htmlFor="password"
@@ -103,8 +97,6 @@ const Login = () => {
               placeholder="••••••••"
             />
           </div>
-
-          {/* Submit Button */}
           <div className="flex items-center justify-between">
             <button
               type="submit"
@@ -115,7 +107,6 @@ const Login = () => {
           </div>
         </form>
 
-        {/* Link to Sign Up Page */}
         <p className="text-center text-gray-500 text-sm mt-6">
           Don't have an account?{" "}
           <Link

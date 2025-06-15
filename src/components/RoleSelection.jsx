@@ -4,27 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { auth, db } from "../firebase"; // Make sure this path is correct
-
-/**
- * Calculates if a person is under 18 based on their date of birth.
- * @param {string} dobString - The date of birth string (e.g., "YYYY-MM-DD").
- * @returns {boolean} True if under 18, false otherwise.
- */
-const isMinorCheck = (dobString) => {
-  if (!dobString) return false;
-  const today = new Date();
-  const birthDate = new Date(dobString);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDifference = today.getMonth() - birthDate.getMonth();
-  if (
-    monthDifference < 0 ||
-    (monthDifference === 0 && today.getDate() < birthDate.getDate())
-  ) {
-    age--;
-  }
-  return age < 18;
-};
+import { auth, db } from "../firebase";
 
 const RoleSelection = () => {
   const [user, setUser] = useState(null);
@@ -32,9 +12,8 @@ const RoleSelection = () => {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
-  const location = useLocation(); // Hook to access navigation state
+  const location = useLocation();
 
-  // Effect to listen for auth state changes and get the current user
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -47,43 +26,37 @@ const RoleSelection = () => {
     return () => unsubscribe();
   }, [navigate]);
 
-  /**
-   * Handles the user's role choice, creates a user document in Firestore,
-   * and navigates to the next appropriate page.
-   * @param {string} role - The role selected by the user ('head manager' or 'worker').
-   */
   const handleRoleSelect = async (role) => {
     if (!user) {
       setError("No user is signed in. Please log in again.");
       return;
     }
 
-    // Get the sign-up data passed from the previous page
     const signUpData = location.state || {};
-    const { firstName = "", lastName = "", dob = "" } = signUpData;
+    const { firstName = "", lastName = "" } = signUpData;
 
     try {
-      const userDocRef = doc(db, "users", user.uid);
-
-      // Construct the data object to save to Firestore
-      const newUserDoc = {
-        uid: user.uid,
-        email: user.email,
-        role: role,
-        fullName: `${firstName} ${lastName}`.trim(),
-        dob: dob,
-        isMinor: isMinorCheck(dob),
-        // The following fields will now be set in the WorkerSetup component
-        phone: "",
-        title: role === "worker" ? "" : "Head Manager",
-        startYear: null,
-      };
-
-      await setDoc(userDocRef, newUserDoc);
-
       if (role === "head manager") {
+        // Create the manager's user document in Firestore, using their UID as the doc ID
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, {
+          role: "head manager",
+          authUid: user.uid,
+          email: user.email,
+          fullName: `${firstName} ${lastName}`.trim(),
+          companyId: null,
+          title: "Head Manager",
+          // These fields are not applicable to managers upon signup
+          isMinor: false,
+          yos: 0,
+          phone: "",
+          dob: "",
+        });
         navigate("/create-company");
       } else {
+        // For workers, we do NOT create a user document here.
+        // They will claim a pre-made profile later.
+        // We just navigate them to the next step.
         navigate("/join-company");
       }
     } catch (err) {
@@ -94,8 +67,8 @@ const RoleSelection = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-600">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading...</p>
       </div>
     );
   }
@@ -104,9 +77,7 @@ const RoleSelection = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-lg bg-white rounded-lg shadow-md p-8 text-center">
         <h2 className="text-3xl font-bold text-gray-800 mb-4">Who are you?</h2>
-        <p className="text-gray-600 mb-8">
-          Choose your role to get started. This helps us tailor your experience.
-        </p>
+        <p className="text-gray-600 mb-8">Choose your role to get started.</p>
 
         {error && (
           <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4">{error}</p>
@@ -115,13 +86,13 @@ const RoleSelection = () => {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
             onClick={() => handleRoleSelect("head manager")}
-            className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline transition duration-300"
+            className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg"
           >
             I'm a Manager
           </button>
           <button
             onClick={() => handleRoleSelect("worker")}
-            className="flex-1 bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline transition duration-300"
+            className="flex-1 bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg"
           >
             I'm a Worker
           </button>

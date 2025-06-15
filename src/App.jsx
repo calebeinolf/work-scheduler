@@ -1,42 +1,27 @@
 // src/App.jsx
 
 import React from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-// --- Import all your page components ---
-import Login from "./components/Login";
-import SignUp from "./components/SignUp";
-import RoleSelection from "./components/RoleSelection";
-import CreateCompany from "./components/CreateCompany";
-import JoinCompany from "./components/JoinCompany";
+// Import all the new and existing page components
+import LandingPage from "./components/LandingPage";
+import CreateCompanyPage from "./components/CreateCompanyPage";
+import JoinCompanyPage from "./components/JoinCompanyPage";
 import Dashboard from "./components/Dashboard";
-import WorkerSetup from "./components/WorkerSetup";
+import Login from "./components/Login"; // Still useful for returning users
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* --- Authentication Routes --- */}
-        <Route path="/signup" element={<SignUp />} />
+        {/* New Onboarding and Main Routes */}
+        <Route path="/create-company" element={<CreateCompanyPage />} />
+        <Route path="/join-company" element={<JoinCompanyPage />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/login" element={<Login />} />
 
-        {/* --- Setup Routes (after first login) --- */}
-        <Route path="/role-selection" element={<RoleSelection />} />
-        <Route path="/create-company" element={<CreateCompany />} />
-        <Route path="/join-company" element={<JoinCompany />} />
-        <Route path="/worker-setup" element={<WorkerSetup />} />
-
-        {/* --- Main Application Route --- */}
-        <Route path="/dashboard" element={<Dashboard />} />
-
-        {/* --- Default Route --- */}
-        {/* If a user goes to the base URL, it will redirect them to the login page. */}
-        <Route path="/" element={<Navigate to="/login" />} />
+        {/* The new default route is the landing page */}
+        <Route path="/" element={<LandingPage />} />
       </Routes>
     </Router>
   );

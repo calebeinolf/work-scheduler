@@ -3,14 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  updateDoc,
-} from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../firebase"; // Make sure this path is correct
 
 const JoinCompany = () => {
@@ -21,7 +14,6 @@ const JoinCompany = () => {
 
   const navigate = useNavigate();
 
-  // Effect to get the current logged-in user
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -33,10 +25,6 @@ const JoinCompany = () => {
     return () => unsubscribe();
   }, [navigate]);
 
-  /**
-   * Handles the form submission to join a company using a join code.
-   * @param {React.FormEvent} e - The form submission event.
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -47,7 +35,6 @@ const JoinCompany = () => {
     setError("");
 
     try {
-      // 1. Find the company with the matching join code
       const companiesRef = collection(db, "companies");
       const q = query(
         companiesRef,
@@ -62,18 +49,11 @@ const JoinCompany = () => {
         return;
       }
 
-      // 2. Get the company ID from the query result
       const companyDoc = querySnapshot.docs[0];
       const companyId = companyDoc.id;
 
-      // 3. Update the worker's user document with the company ID
-      const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, {
-        companyId: companyId,
-      });
-
-      // 4. Navigate to the new worker setup page
-      navigate("/worker-setup");
+      // Navigate to the claim profile page, passing the companyId in the state
+      navigate("/claim-profile", { state: { companyId: companyId } });
     } catch (err) {
       setError("Failed to join the company. Please try again.");
       console.error("Error joining company:", err);

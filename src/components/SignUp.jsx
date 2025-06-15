@@ -3,37 +3,29 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase"; // Make sure this path is correct
+import { auth } from "../firebase";
 
 const SignUp = () => {
-  // State hooks for all form inputs
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [dob, setDob] = useState(""); // Date of Birth
+  const [firstName, setFirstName] = useState(""); // Added back
+  const [lastName, setLastName] = useState(""); // Added back
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
-  /**
-   * Handles the form submission for user registration.
-   * @param {React.FormEvent} e - The form submission event.
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
     try {
-      // Create the user in Firebase Auth
       await createUserWithEmailAndPassword(auth, email, password);
 
-      // On success, navigate to role selection and pass the form data along in the state
+      // Pass name info to the next step; it will be used if the user is a manager.
       navigate("/role-selection", {
         state: {
           firstName,
           lastName,
-          dob,
         },
       });
     } catch (err) {
@@ -57,7 +49,6 @@ const SignUp = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* First Name Input */}
             <div>
               <label
                 htmlFor="firstName"
@@ -75,7 +66,6 @@ const SignUp = () => {
                 placeholder="Jane"
               />
             </div>
-            {/* Last Name Input */}
             <div>
               <label
                 htmlFor="lastName"
@@ -95,7 +85,6 @@ const SignUp = () => {
             </div>
           </div>
 
-          {/* Email Input */}
           <div>
             <label
               htmlFor="email"
@@ -114,7 +103,6 @@ const SignUp = () => {
             />
           </div>
 
-          {/* Password Input */}
           <div>
             <label
               htmlFor="password"
@@ -133,25 +121,6 @@ const SignUp = () => {
             />
           </div>
 
-          {/* Date of Birth Input */}
-          <div>
-            <label
-              htmlFor="dob"
-              className="block text-gray-700 text-sm font-bold mb-2"
-            >
-              Date of Birth
-            </label>
-            <input
-              type="date"
-              id="dob"
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-              required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Submit Button */}
           <div className="pt-2">
             <button
               type="submit"

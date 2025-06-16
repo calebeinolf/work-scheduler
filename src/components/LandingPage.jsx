@@ -43,6 +43,13 @@ const LandingPage = () => {
             </p>
           </Link>
         </div>
+
+        <div className="my-4 flex gap-2 justify-center items-center">
+          <p className="text-gray-500">Already have an account?</p>
+          <Link to="/login" className="font-medium text-blue-600">
+            Login
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -561,46 +561,51 @@ const ScheduleView = ({ company, workers }) => {
       if (orderA !== orderB) return orderA - orderB;
       return (b.yos || 0) - (a.yos || 0);
     };
-    const managersAndGuards = workers.filter((w) => w.title !== "Front Worker");
-    const frontWorkers = workers.filter((w) => w.title === "Front Worker");
+    const allWorkers = [...workers];
+    allWorkers.sort(sortLogic);
+
     return {
-      sortedManagersAndGuards: managersAndGuards.sort(sortLogic),
-      sortedFrontWorkers: frontWorkers.sort(sortLogic),
+      sortedManagersAndGuards: allWorkers.filter(
+        (w) => w.title !== "Front Worker"
+      ),
+      sortedFrontWorkers: allWorkers.filter((w) => w.title === "Front Worker"),
     };
   }, [workers]);
 
-  // --- Calculate guard counts for the header ---
-  const dailyGuardCounts = useMemo(() => {
+  const dailyStaffCounts = useMemo(() => {
     const counts = {};
     const dayKeys = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
 
-    dayKeys.forEach((day) => {
-      let openingCount = 0;
-      let closingCount = 0;
+    const calculateCountsForType = (shiftType) => {
+      dayKeys.forEach((day) => {
+        let openingCount = 0;
+        let closingCount = 0;
 
-      workers.forEach((worker) => {
-        const dayShifts = scheduleData[worker.uid]?.[day];
-        if (Array.isArray(dayShifts)) {
-          dayShifts.forEach((shift) => {
-            if (shift.type === "GUARD") {
-              const category = getShiftCategory(shift);
-              if (category === "Opening" || category === "All Day") {
-                openingCount++;
+        workers.forEach((worker) => {
+          const dayShifts = scheduleData[worker.uid]?.[day];
+          if (Array.isArray(dayShifts)) {
+            dayShifts.forEach((shift) => {
+              if (shift.type === shiftType) {
+                const category = getShiftCategory(shift);
+                if (category === "Opening" || category === "All Day")
+                  openingCount++;
+                if (category === "Closing" || category === "All Day")
+                  closingCount++;
               }
-              if (category === "Closing" || category === "All Day") {
-                closingCount++;
-              }
-            }
-          });
-        }
+            });
+          }
+        });
+
+        if (!counts[day]) counts[day] = {};
+        counts[day][shiftType] =
+          openingCount === closingCount
+            ? `${openingCount}`
+            : `${openingCount}-${closingCount}`;
       });
+    };
 
-      if (openingCount === closingCount) {
-        counts[day] = `${openingCount}`;
-      } else {
-        counts[day] = `${openingCount}-${closingCount}`;
-      }
-    });
+    calculateCountsForType("GUARD");
+    calculateCountsForType("FRONT");
 
     return counts;
   }, [scheduleData, workers]);
@@ -691,7 +696,7 @@ const ScheduleView = ({ company, workers }) => {
     if (!popoverTarget) setHoveredCell({ row: null, col: colId });
   };
 
-  const renderWeekHeader = (isFrontWorkerTable = false) => {
+  const renderWeekHeader = () => {
     const days = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
     const displayDays = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
     const headerDates = [];
@@ -708,7 +713,7 @@ const ScheduleView = ({ company, workers }) => {
           className={`p-2 border text-left text-sm font-semibold text-gray-600 min-w-[160px] bg-gray-100`}
           onMouseEnter={() => handleHeaderMouseEnter("name")}
         >
-          {isFrontWorkerTable ? "Front Workers" : "Guards & Managers"}
+          Worker
         </th>
         <th
           className={`p-2 border text-sm font-semibold text-gray-600 transition-colors duration-150 ${
@@ -727,8 +732,15 @@ const ScheduleView = ({ company, workers }) => {
             onMouseEnter={() => handleHeaderMouseEnter(dayKey)}
           >
             <div>{headerDates[i]}</div>
-            <div className="text-blue-600 font-medium text-xs mt-1">
-              {dailyGuardCounts[dayKey] || "0"} Guards
+            <div className="flex items-center justify-center gap-3">
+              <div className="text-blue-600 font-bold text-xs mt-1">
+                {dailyStaffCounts[dayKey]?.GUARD || "0"}
+                <span className="font-medium"> G</span>
+              </div>
+              <div className="text-green-600 font-bold text-xs mt-1">
+                {dailyStaffCounts[dayKey]?.FRONT || "0"}
+                <span className="font-medium"> F</span>
+              </div>
             </div>
           </th>
         ))}
@@ -785,7 +797,7 @@ const ScheduleView = ({ company, workers }) => {
             if (!popoverTarget) setHoveredCell({ row: null, col: null });
           }}
         >
-          <thead>{renderWeekHeader(false)}</thead>
+          <thead>{renderWeekHeader()}</thead>
           <tbody>
             {loading ? (
               <tr>
@@ -811,16 +823,8 @@ const ScheduleView = ({ company, workers }) => {
               ))
             )}
           </tbody>
-        </table>
-        {sortedFrontWorkers.length > 0 && (
-          <table
-            className="w-full border-collapse border mt-6"
-            onMouseLeave={() => {
-              if (!popoverTarget) setHoveredCell({ row: null, col: null });
-            }}
-          >
-            <thead>{renderWeekHeader(true)}</thead>
-            <tbody>
+          {sortedFrontWorkers.length > 0 && (
+            <tbody className="border-t-4 border-gray-300">
               {sortedFrontWorkers.map((worker) => (
                 <WorkerRow
                   key={worker.uid}
@@ -837,8 +841,8 @@ const ScheduleView = ({ company, workers }) => {
                 />
               ))}
             </tbody>
-          </table>
-        )}
+          )}
+        </table>
       </div>
     </div>
   );

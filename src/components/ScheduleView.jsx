@@ -258,6 +258,7 @@ const ShiftEditPopover = ({ targetCell, onSave, onClose }) => {
                 <option>GUARD</option>
                 <option>MANAGER</option>
                 <option>FRONT</option>
+                <option>LESSONS</option>
               </select>
               {shifts.length > 1 && (
                 <button
@@ -395,6 +396,7 @@ const WorkerRow = ({
   };
 
   const getShiftHighlightClass = (shift) => {
+    if (shift.type === "LESSONS") return ""; // No highlight for lessons
     const category = getShiftCategory(shift);
     switch (category) {
       case "All Day":
@@ -410,6 +412,7 @@ const WorkerRow = ({
 
   const shouldShowShiftType = (shift, worker) => {
     if (!shift || !worker || !shift.type || !worker.title) return false;
+    if (shift.type === "LESSONS") return true; // Always show (L)
     if (worker.title.includes("Lifeguard") && shift.type === "GUARD")
       return false;
     if (worker.title.includes("Front") && shift.type === "FRONT") return false;

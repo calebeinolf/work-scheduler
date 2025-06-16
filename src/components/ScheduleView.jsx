@@ -70,6 +70,21 @@ const calculateDailyHours = (dayShifts, isMinor) => {
   return durationInHours;
 };
 
+// --- NEW: Helper to categorize shifts for counting and highlighting ---
+const getShiftCategory = (shift) => {
+  if (!shift || !shift.start || !shift.end) return null;
+  const openingTime = "13:00"; // 1:00 PM
+  const closingTime = "18:00"; // 6:00 PM
+
+  const isOpening = shift.start <= openingTime;
+  const isClosing = shift.end >= closingTime;
+
+  if (isOpening && isClosing) return "All Day";
+  if (isOpening) return "Opening";
+  if (isClosing) return "Closing";
+  return "Midday";
+};
+
 // --- Shift Edit Popover Component for Multiple Shifts ---
 const ShiftEditPopover = ({ targetCell, onSave, onClose }) => {
   const { worker, initialShift } = targetCell;
@@ -379,6 +394,20 @@ const WorkerRow = ({
     return "";
   };
 
+  const getShiftHighlightClass = (shift) => {
+    const category = getShiftCategory(shift);
+    switch (category) {
+      case "All Day":
+        return "bg-green-100";
+      case "Opening":
+        return "bg-yellow-100";
+      case "Closing":
+        return "bg-purple-100";
+      default:
+        return "";
+    }
+  };
+
   const shouldShowShiftType = (shift, worker) => {
     if (!shift || !worker || !shift.type || !worker.title) return false;
     if (worker.title.includes("Lifeguard") && shift.type === "GUARD")
@@ -463,7 +492,9 @@ const WorkerRow = ({
                   {dayShifts.map((shift, index) => (
                     <div
                       key={index}
-                      className="text-sm flex items-center gap-1 justify-center text-nowrap"
+                      className={`text-sm rounded-md p-0.5 flex items-center gap-1 justify-center text-nowrap ${getShiftHighlightClass(
+                        shift
+                      )}`}
                     >
                       <div>{`${formatTime12hr(shift.start)} - ${formatTime12hr(
                         shift.end
@@ -537,6 +568,42 @@ const ScheduleView = ({ company, workers }) => {
       sortedFrontWorkers: frontWorkers.sort(sortLogic),
     };
   }, [workers]);
+
+  // --- Calculate guard counts for the header ---
+  const dailyGuardCounts = useMemo(() => {
+    const counts = {};
+    const dayKeys = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
+
+    dayKeys.forEach((day) => {
+      let openingCount = 0;
+      let closingCount = 0;
+
+      workers.forEach((worker) => {
+        const dayShifts = scheduleData[worker.uid]?.[day];
+        if (Array.isArray(dayShifts)) {
+          dayShifts.forEach((shift) => {
+            if (shift.type === "GUARD") {
+              const category = getShiftCategory(shift);
+              if (category === "Opening" || category === "All Day") {
+                openingCount++;
+              }
+              if (category === "Closing" || category === "All Day") {
+                closingCount++;
+              }
+            }
+          });
+        }
+      });
+
+      if (openingCount === closingCount) {
+        counts[day] = `${openingCount}`;
+      } else {
+        counts[day] = `${openingCount}-${closingCount}`;
+      }
+    });
+
+    return counts;
+  }, [scheduleData, workers]);
 
   const scheduleDocId = useMemo(() => {
     if (!company?.id) return null;
@@ -659,7 +726,10 @@ const ScheduleView = ({ company, workers }) => {
             }`}
             onMouseEnter={() => handleHeaderMouseEnter(dayKey)}
           >
-            {headerDates[i]}
+            <div>{headerDates[i]}</div>
+            <div className="text-blue-600 font-medium text-xs mt-1">
+              {dailyGuardCounts[dayKey] || "0"} Guards
+            </div>
           </th>
         ))}
         <th

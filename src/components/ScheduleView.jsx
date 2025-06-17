@@ -269,7 +269,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
         </div>
         <button
           onClick={addShift}
-          className="w-full text-sm p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded"
+          className="w-full text-sm p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded"
         >
           + Add Shift Time
         </button>
@@ -277,13 +277,13 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
         <div className="flex space-x-2">
           <button
             onClick={() => onSave(null)}
-            className="w-full text-sm text-center p-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded"
+            className="w-full text-sm text-center p-2 text-gray-700 bg-gray-200 hover:bg-gray-200 rounded"
           >
             Reset
           </button>
           <button
             onClick={() => onSave([{ type: "OFF" }])}
-            className="w-full text-sm text-center p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded"
+            className="w-full text-sm text-center p-2 text-red-600 bg-red-100 hover:bg-red-200 rounded"
           >
             Set as OFF
           </button>
@@ -510,7 +510,7 @@ const WorkerRow = ({
               )
             ) : Array.isArray(dayShifts) ? (
               dayShifts[0]?.type === "OFF" ? (
-                <div className="font-semibold text-sm text-red-500 h-full flex items-center justify-center">
+                <div className="text-sm text-red-500 h-full flex items-center justify-center">
                   OFF
                 </div>
               ) : (
@@ -944,44 +944,12 @@ const ScheduleView = ({ company, workers, presets }) => {
         </button>
       </div>
 
-      <div
-        className={`rounded-lg p-2 mb-4 flex items-center justify-between ${
-          selectedWorkers.length === 0
-            ? "opacity-50 bg-gray-200"
-            : "opacity-100 bg-gray-800"
-        }`}
-      >
-        <span
-          className={`font-medium ml-1 ${
-            selectedWorkers.length === 0 ? "" : "text-white"
-          }`}
-        >
-          {selectedWorkers.length} worker(s) selected
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleBulkUpdate([{ type: "OFF" }])}
-            className="px-3 py-1 text-sm text-red-500 bg-red-100 rounded-md -disabled:hover:bg-red-200  disabled:!cursor-default"
-            disabled={selectedWorkers.length === 0}
-          >
-            Set as OFF
-          </button>
-          <button
-            onClick={() => handleBulkUpdate(null)}
-            className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded-md -disabled:hover:bg-red-200  disabled:!cursor-default"
-            disabled={selectedWorkers.length === 0}
-          >
-            Reset Shifts
-          </button>
-          <button
-            onClick={handleBulkRemove}
-            className="px-3 py-1 text-sm bg-red-500 text-white rounded-md -disabled:hover:bg-red-200  disabled:!cursor-default"
-            disabled={selectedWorkers.length === 0}
-          >
-            Remove
-          </button>
-        </div>
-      </div>
+      {/* Bulk actions bar */}
+      <BulkActionsBar
+        selectedWorkers={selectedWorkers}
+        handleBulkUpdate={handleBulkUpdate}
+        handleBulkRemove={handleBulkRemove}
+      />
 
       <div className="overflow-x-auto">
         <table
@@ -1054,6 +1022,102 @@ const ScheduleView = ({ company, workers, presets }) => {
             </>
           )}
         </table>
+      </div>
+    </div>
+  );
+};
+
+// --- BulkActionsBar component ---
+const BulkActionsBar = ({
+  selectedWorkers,
+  handleBulkUpdate,
+  handleBulkRemove,
+}) => {
+  const [showMenu, setShowMenu] = React.useState(false);
+  const menuRef = React.useRef(null);
+
+  // Close menu on outside click
+  React.useEffect(() => {
+    const handleClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClick);
+    }
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showMenu]);
+
+  return (
+    <div
+      className={`rounded-lg p-2 mb-4 flex items-center justify-between ${
+        selectedWorkers.length === 0 ? " bg-gray-200" : " bg-gray-800"
+      }`}
+    >
+      <span
+        className={`font-medium ml-1 ${
+          selectedWorkers.length === 0 ? "" : "text-white"
+        }`}
+      >
+        {selectedWorkers.length} worker(s) selected
+      </span>
+      <div className="flex items-center gap-2 relative">
+        <button
+          onClick={() => handleBulkUpdate([{ type: "OFF" }])}
+          className={`px-3 py-1 text-sm rounded-md ${
+            selectedWorkers.length === 0
+              ? "opacity-50 !cursor-default"
+              : "text-red-500 bg-red-100 hover:bg-red-200 !cursor-pointer"
+          }`}
+          disabled={selectedWorkers.length === 0}
+        >
+          Set as OFF
+        </button>
+        <button
+          onClick={() => handleBulkUpdate(null)}
+          className={`px-3 py-1 text-sm rounded-md !cursor-default ${
+            selectedWorkers.length === 0
+              ? "opacity-50 !cursor-default"
+              : "bg-gray-100 hover:bg-gray-200 !cursor-pointer"
+          }`}
+          disabled={selectedWorkers.length === 0}
+        >
+          Reset Shifts
+        </button>
+        {/* Ellipsis button for popup menu */}
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setShowMenu((v) => !v)}
+            className={`w-7 h-7 flex items-center justify-center rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 `}
+            aria-label="More actions"
+            type="button"
+          >
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <circle cx="4" cy="10" r="1.7" />
+              <circle cx="10" cy="10" r="1.7" />
+              <circle cx="16" cy="10" r="1.7" />
+            </svg>
+          </button>
+          {showMenu && (
+            <div className="absolute -right-4 mt-2 w-min bg-white border rounded shadow-lg z-50">
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  handleBulkRemove();
+                }}
+                className={`block w-full text-nowrap text-sm text-left p-2 text-red-600 hover:bg-red-50 ${
+                  selectedWorkers.length === 0
+                    ? "opacity-50 !cursor-default"
+                    : "bg-gray-100 hover:bg-gray-200 !cursor-pointer"
+                }`}
+                disabled={selectedWorkers.length === 0}
+              >
+                Remove workers
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

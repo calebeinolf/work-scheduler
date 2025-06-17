@@ -7,6 +7,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import EditWorkerModal from "./EditWorkerModal"; // Import the new modal
@@ -239,6 +240,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
                             : "bg-gray-200 hover:bg-blue-200"
                         }`}
                       >
+                        {/* This label is supposed to be like this, don't change it */}
                         {`${formatTime12hr(p.start).replace(
                           /:00$/,
                           ""
@@ -297,7 +299,8 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   );
 };
 
-// Helper to get the start of a week (Saturday) for any given date DO NOT DELETE
+// Helper to get the start of a week (Saturday) for any given date
+// Do not delete this method, it is neccessary
 const getSaturdayOfWeek = (d) => {
   const date = new Date(d);
   const day = date.getDay(); // Sunday - Saturday : 0 - 6
@@ -384,8 +387,11 @@ const WorkerRow = ({
   revealedHoursWorkerId,
   onRevealHoursStart,
   onRevealHoursEnd,
+  isSelected,
+  onToggleSelect,
 }) => {
   const getCellClass = (colKey) => {
+    if (isSelected) return ""; // Selection highlight takes priority, disable hover highlight
     if (
       popoverTarget &&
       popoverTarget.worker.uid === worker.uid &&
@@ -440,7 +446,18 @@ const WorkerRow = ({
   }, [weeklyShifts, worker.isMinor]);
 
   return (
-    <tr key={worker.uid}>
+    <tr
+      key={worker.uid}
+      className={`${isSelected ? "bg-indigo-200" : "even:bg-gray-50"}`}
+    >
+      <td className="p-1 border text-center">
+        <input
+          type="checkbox"
+          className="rounded"
+          checked={isSelected}
+          onChange={() => onToggleSelect(worker.uid)}
+        />
+      </td>
       <td
         className={`p-1 border font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto cursor-pointer transition-colors duration-150 ${getCellClass(
           "name"
@@ -543,10 +560,11 @@ const ScheduleView = ({ company, workers, presets }) => {
   const [scheduleData, setScheduleData] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedWorker, setSelectedWorker] = useState(null);
-  const [editingWorker, setEditingWorker] = useState(null); // For edit modal
+  const [editingWorker, setEditingWorker] = useState(null);
   const [hoveredCell, setHoveredCell] = useState({ row: null, col: null });
   const [popoverTarget, setPopoverTarget] = useState(null);
   const [revealedHoursWorkerId, setRevealedHoursWorkerId] = useState(null);
+  const [selectedWorkers, setSelectedWorkers] = useState([]);
 
   const weekStartDate = useMemo(
     () => getSaturdayOfWeek(currentDate),
@@ -682,6 +700,72 @@ const ScheduleView = ({ company, workers, presets }) => {
     return () => unsubscribe();
   }, [scheduleDocId, workers, company, weekStartDate, loading]);
 
+  const handleToggleSelectWorker = (workerId) => {
+    setSelectedWorkers((prev) =>
+      prev.includes(workerId)
+        ? prev.filter((id) => id !== workerId)
+        : [...prev, workerId]
+    );
+  };
+
+  const handleToggleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedWorkers(workers.map((w) => w.uid));
+    } else {
+      setSelectedWorkers([]);
+    }
+  };
+
+  const handleBulkUpdate = async (updateValue) => {
+    if (selectedWorkers.length === 0 || !scheduleDocId) return;
+
+    const batch = writeBatch(db);
+    const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+
+    const updates = {};
+    const days = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
+    selectedWorkers.forEach((workerId) => {
+      days.forEach((day) => {
+        updates[`shifts.${workerId}.${day}`] = updateValue;
+      });
+    });
+
+    batch.update(scheduleDocRef, updates);
+
+    try {
+      await batch.commit();
+      setSelectedWorkers([]); // Clear selection after action
+    } catch (error) {
+      console.error("Bulk update failed:", error);
+      alert("Failed to update shifts.");
+    }
+  };
+
+  const handleBulkRemove = async () => {
+    if (selectedWorkers.length === 0) return;
+    if (
+      window.confirm(
+        `Are you sure you want to remove ${
+          selectedWorkers.length
+        } worker(s) from ${company?.name || "this company"}? This is permanent.`
+      )
+    ) {
+      const batch = writeBatch(db);
+      selectedWorkers.forEach((workerId) => {
+        const workerDocRef = doc(db, "users", workerId);
+        batch.delete(workerDocRef);
+      });
+
+      try {
+        await batch.commit();
+        setSelectedWorkers([]);
+      } catch (error) {
+        console.error("Bulk remove failed:", error);
+        alert("Failed to remove workers.");
+      }
+    }
+  };
+
   const handleCellClick = (event, worker, day) => {
     event.stopPropagation();
     const currentShift = scheduleData[worker.uid]?.[day] || null;
@@ -723,7 +807,7 @@ const ScheduleView = ({ company, workers, presets }) => {
 
   const handleOpenEditModal = (worker) => {
     setEditingWorker(worker);
-    setSelectedWorker(null); // Close the details modal
+    setSelectedWorker(null);
   };
 
   const handleDeleteWorker = async (workerId) => {
@@ -734,7 +818,7 @@ const ScheduleView = ({ company, workers, presets }) => {
     ) {
       try {
         await deleteDoc(doc(db, "users", workerId));
-        setSelectedWorker(null); // Close the details modal
+        setSelectedWorker(null);
       } catch (error) {
         console.error("Error removing worker: ", error);
         alert("Failed to remove worker.");
@@ -759,6 +843,17 @@ const ScheduleView = ({ company, workers, presets }) => {
     }
     return (
       <tr className="bg-gray-100">
+        <th className="p-2 border text-center">
+          <input
+            type="checkbox"
+            className="rounded"
+            onChange={handleToggleSelectAll}
+            checked={
+              selectedWorkers.length > 0 &&
+              selectedWorkers.length === workers.length
+            }
+          />
+        </th>
         <th
           className={`p-2 border text-left text-sm font-semibold text-gray-600 min-w-[150px] max-w-[250px] bg-gray-100`}
           onMouseEnter={() => handleHeaderMouseEnter("name")}
@@ -848,6 +943,46 @@ const ScheduleView = ({ company, workers, presets }) => {
           Next &rarr;
         </button>
       </div>
+
+      <div
+        className={`rounded-lg p-2 mb-4 flex items-center justify-between ${
+          selectedWorkers.length === 0
+            ? "opacity-50 bg-gray-200"
+            : "opacity-100 bg-gray-800"
+        }`}
+      >
+        <span
+          className={`font-medium ml-1 ${
+            selectedWorkers.length === 0 ? "" : "text-white"
+          }`}
+        >
+          {selectedWorkers.length} worker(s) selected
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleBulkUpdate([{ type: "OFF" }])}
+            className="px-3 py-1 text-sm text-red-500 bg-red-100 rounded-md -disabled:hover:bg-red-200  disabled:!cursor-default"
+            disabled={selectedWorkers.length === 0}
+          >
+            Set as OFF
+          </button>
+          <button
+            onClick={() => handleBulkUpdate(null)}
+            className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded-md -disabled:hover:bg-red-200  disabled:!cursor-default"
+            disabled={selectedWorkers.length === 0}
+          >
+            Reset Shifts
+          </button>
+          <button
+            onClick={handleBulkRemove}
+            className="px-3 py-1 text-sm bg-red-500 text-white rounded-md -disabled:hover:bg-red-200  disabled:!cursor-default"
+            disabled={selectedWorkers.length === 0}
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table
           className="w-full border-collapse border"
@@ -859,7 +994,7 @@ const ScheduleView = ({ company, workers, presets }) => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="10" className="text-center p-4">
+                <td colSpan="11" className="text-center p-4">
                   Loading schedule...
                 </td>
               </tr>
@@ -877,13 +1012,15 @@ const ScheduleView = ({ company, workers, presets }) => {
                   revealedHoursWorkerId={revealedHoursWorkerId}
                   onRevealHoursStart={setRevealedHoursWorkerId}
                   onRevealHoursEnd={() => setRevealedHoursWorkerId(null)}
+                  isSelected={selectedWorkers.includes(worker.uid)}
+                  onToggleSelect={handleToggleSelectWorker}
                 />
               ))
             )}
           </tbody>
           {sortedFrontWorkers.length > 0 && (
             <>
-              {/* Gap row between sections, I added it on purpose, please DO NOT CHANGE! */}
+              {/* Gap row between sections, I added it on purpose, please DO NOT REMOVE! */}
               <tbody>
                 <tr className="bg-gray-100">
                   <td
@@ -909,6 +1046,8 @@ const ScheduleView = ({ company, workers, presets }) => {
                     revealedHoursWorkerId={revealedHoursWorkerId}
                     onRevealHoursStart={setRevealedHoursWorkerId}
                     onRevealHoursEnd={() => setRevealedHoursWorkerId(null)}
+                    isSelected={selectedWorkers.includes(worker.uid)}
+                    onToggleSelect={handleToggleSelectWorker}
                   />
                 ))}
               </tbody>

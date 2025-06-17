@@ -1,15 +1,25 @@
 // src/components/ManagerDashboard.jsx
 
 import React, { useState, useEffect } from "react";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import ScheduleView from "./ScheduleView";
-import AddWorkerModal from "./AddWorkerModal"; // Import the new modal
+import AddWorkerModal from "./AddWorkerModal";
+import EditPresetsModal from "./EditPresetsModal"; // Import the new modal
 
 const ManagerDashboard = ({ user, company }) => {
   const [workers, setWorkers] = useState([]);
   const [loadingWorkers, setLoadingWorkers] = useState(true);
   const [isAddWorkerModalOpen, setIsAddWorkerModalOpen] = useState(false);
+  const [isPresetsModalOpen, setIsPresetsModalOpen] = useState(false); // State for new modal
+  const [presets, setPresets] = useState([]); // State to hold presets
 
   useEffect(() => {
     if (!company?.id) return;
@@ -19,11 +29,9 @@ const ManagerDashboard = ({ user, company }) => {
       collection(db, "users"),
       where("companyId", "==", company.id)
     );
-
-    const unsubscribe = onSnapshot(
+    const unsubscribeWorkers = onSnapshot(
       workersQuery,
       (snapshot) => {
-        // Include the manager in the workers list for display purposes if needed, or filter them out
         const workersList = snapshot.docs.map((doc) => ({
           ...doc.data(),
           uid: doc.id,
@@ -37,20 +45,36 @@ const ManagerDashboard = ({ user, company }) => {
       }
     );
 
-    return () => unsubscribe();
+    // Listener for shift presets
+    const presetsDocRef = doc(db, "shiftPresets", company.id);
+    const unsubscribePresets = onSnapshot(presetsDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setPresets(docSnap.data().presets || []);
+      } else {
+        setPresets([]);
+      }
+    });
+
+    return () => {
+      unsubscribeWorkers();
+      unsubscribePresets();
+    };
   }, [company]);
 
   return (
     <div>
-      {/* Render the modal for adding workers */}
       <AddWorkerModal
         isOpen={isAddWorkerModalOpen}
         onClose={() => setIsAddWorkerModalOpen(false)}
         companyId={company.id}
       />
+      <EditPresetsModal
+        isOpen={isPresetsModalOpen}
+        onClose={() => setIsPresetsModalOpen(false)}
+        companyId={company.id}
+      />
 
       <div className="flex justify-between items-start mb-6">
-        {/* Left side title */}
         <div>
           <h2 className="text-3xl font-bold text-gray-800">
             Manager Dashboard
@@ -70,12 +94,20 @@ const ManagerDashboard = ({ user, company }) => {
               {company.joinCode}
             </span>
           </div>
-          <button
-            onClick={() => setIsAddWorkerModalOpen(true)}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200"
-          >
-            + Add Worker
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsPresetsModalOpen(true)}
+              className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg"
+            >
+              Edit Presets
+            </button>
+            <button
+              onClick={() => setIsAddWorkerModalOpen(true)}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200"
+            >
+              + Add Worker
+            </button>
+          </div>
         </div>
       </div>
 
@@ -84,8 +116,7 @@ const ManagerDashboard = ({ user, company }) => {
           <p className="text-gray-500">Loading workers...</p>
         </div>
       ) : (
-        // ScheduleView remains the same, displaying the fetched workers
-        <ScheduleView company={company} workers={workers} />
+        <ScheduleView company={company} workers={workers} presets={presets} />
       )}
     </div>
   );

@@ -70,7 +70,7 @@ const calculateDailyHours = (dayShifts, isMinor) => {
   return durationInHours;
 };
 
-// --- NEW: Helper to categorize shifts for counting and highlighting ---
+// --- Helper to categorize shifts for counting and highlighting ---
 const getShiftCategory = (shift) => {
   if (!shift || !shift.start || !shift.end) return null;
   const openingTime = "13:00"; // 1:00 PM
@@ -86,17 +86,16 @@ const getShiftCategory = (shift) => {
 };
 
 // --- Shift Edit Popover Component for Multiple Shifts ---
-const ShiftEditPopover = ({ targetCell, onSave, onClose }) => {
+const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   const { worker, initialShift } = targetCell;
   const [shifts, setShifts] = useState([]);
-  const [editingCustomIndex, setEditingCustomIndex] = useState(null); // To track which shift is in custom mode
+  const [editingCustomIndex, setEditingCustomIndex] = useState(null);
   const popoverRef = useRef(null);
+  const [activeShiftType, setActiveShiftType] = useState("GUARD");
 
-  const predefinedShifts = [
-    { label: "9:30-5", start: "09:30", end: "17:00" },
-    { label: "11:15-8:30", start: "11:15", end: "20:30" },
-    { label: "4-8:30", start: "16:00", end: "20:30" },
-  ];
+  const applicablePresets = useMemo(() => {
+    return presets.filter((p) => p.applicableTo.includes(activeShiftType));
+  }, [presets, activeShiftType]);
 
   useEffect(() => {
     let startingShifts = [];
@@ -106,7 +105,9 @@ const ShiftEditPopover = ({ targetCell, onSave, onClose }) => {
       );
     }
 
-    if (startingShifts.length === 0) {
+    if (startingShifts.length > 0) {
+      setActiveShiftType(startingShifts[0].type);
+    } else {
       let defaultType = "GUARD";
       if (worker) {
         const title = worker.title.toLowerCase();
@@ -114,6 +115,7 @@ const ShiftEditPopover = ({ targetCell, onSave, onClose }) => {
           defaultType = "MANAGER";
         else if (title.includes("front")) defaultType = "FRONT";
       }
+      setActiveShiftType(defaultType);
       startingShifts.push({ start: "09:00", end: "17:00", type: defaultType });
     }
     setShifts(startingShifts);
@@ -122,26 +124,23 @@ const ShiftEditPopover = ({ targetCell, onSave, onClose }) => {
   const handleShiftChange = (index, field, value) => {
     const newShifts = [...shifts];
     newShifts[index][field] = value;
+    if (field === "type") setActiveShiftType(value); // Update active type for filtering presets
     setShifts(newShifts);
   };
 
-  const handlePredefinedClick = (index, shift) => {
+  const handlePredefinedClick = (index, preset) => {
     const newShifts = [...shifts];
-    newShifts[index].start = shift.start;
-    newShifts[index].end = shift.end;
+    newShifts[index].start = preset.start;
+    newShifts[index].end = preset.end;
     setShifts(newShifts);
     setEditingCustomIndex(null);
   };
 
   const addShift = () => {
-    let defaultType = "GUARD";
-    if (worker) {
-      const title = worker.title.toLowerCase();
-      if (title.includes("manager") || title.includes("head guard"))
-        defaultType = "MANAGER";
-      else if (title.includes("front")) defaultType = "FRONT";
-    }
-    setShifts([...shifts, { start: "09:00", end: "17:00", type: defaultType }]);
+    setShifts([
+      ...shifts,
+      { start: "09:00", end: "17:00", type: activeShiftType },
+    ]);
   };
 
   const removeShift = (index) => {
@@ -194,13 +193,24 @@ const ShiftEditPopover = ({ targetCell, onSave, onClose }) => {
       style={getPopoverStyle()}
     >
       <div className="space-y-3">
-        {/* <h4 className="font-bold text-center">Edit Day Shifts</h4> */}
         <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
           {shifts.map((shift, index) => (
             <div
               key={index}
               className="p-2 border rounded-md space-y-2 bg-gray-50 relative"
             >
+              <select
+                value={shift.type}
+                onChange={(e) =>
+                  handleShiftChange(index, "type", e.target.value)
+                }
+                className="w-full p-1 border rounded-md bg-white"
+              >
+                <option>GUARD</option>
+                <option>MANAGER</option>
+                <option>FRONT</option>
+                <option>LESSONS</option>
+              </select>
               {editingCustomIndex === index ? (
                 <div className="flex items-center space-x-2">
                   <input
@@ -222,21 +232,24 @@ const ShiftEditPopover = ({ targetCell, onSave, onClose }) => {
                   />
                 </div>
               ) : (
-                <div className="flex items-center space-x-1 justify-center">
-                  {predefinedShifts.map((pShift) => {
+                <div className="flex flex-wrap items-center gap-1 justify-center">
+                  {applicablePresets.map((p) => {
                     const isSelected =
-                      shift.start === pShift.start && shift.end === pShift.end;
+                      shift.start === p.start && shift.end === p.end;
                     return (
                       <button
-                        key={pShift.label}
-                        onClick={() => handlePredefinedClick(index, pShift)}
+                        key={p.id}
+                        onClick={() => handlePredefinedClick(index, p)}
                         className={`text-xs px-2 py-1 rounded ${
                           isSelected
                             ? "bg-black text-white"
                             : "bg-gray-200 hover:bg-blue-200"
                         }`}
                       >
-                        {pShift.label}
+                        {`${formatTime12hr(p.start).replace(
+                          /:00$/,
+                          ""
+                        )}-${formatTime12hr(p.end).replace(/:00$/, "")}`}
                       </button>
                     );
                   })}
@@ -248,18 +261,6 @@ const ShiftEditPopover = ({ targetCell, onSave, onClose }) => {
                   </button>
                 </div>
               )}
-              <select
-                value={shift.type}
-                onChange={(e) =>
-                  handleShiftChange(index, "type", e.target.value)
-                }
-                className="w-full p-1 border rounded-md bg-white"
-              >
-                <option>GUARD</option>
-                <option>MANAGER</option>
-                <option>FRONT</option>
-                <option>LESSONS</option>
-              </select>
               {shifts.length > 1 && (
                 <button
                   onClick={() => removeShift(index)}
@@ -275,7 +276,7 @@ const ShiftEditPopover = ({ targetCell, onSave, onClose }) => {
           onClick={addShift}
           className="w-full text-sm p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded"
         >
-          + Add Shift
+          + Add Shift Time
         </button>
         <hr />
         <div className="flex space-x-2">
@@ -396,7 +397,7 @@ const WorkerRow = ({
   };
 
   const getShiftHighlightClass = (shift) => {
-    if (shift.type === "LESSONS") return ""; // No highlight for lessons
+    if (shift.type === "LESSONS") return "";
     const category = getShiftCategory(shift);
     switch (category) {
       case "All Day":
@@ -412,7 +413,7 @@ const WorkerRow = ({
 
   const shouldShowShiftType = (shift, worker) => {
     if (!shift || !worker || !shift.type || !worker.title) return false;
-    if (shift.type === "LESSONS") return true; // Always show (L)
+    if (shift.type === "LESSONS") return true;
     if (worker.title.includes("Lifeguard") && shift.type === "GUARD")
       return false;
     if (worker.title.includes("Front") && shift.type === "FRONT") return false;
@@ -532,7 +533,7 @@ const WorkerRow = ({
   );
 };
 
-const ScheduleView = ({ company, workers }) => {
+const ScheduleView = ({ company, workers, presets }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -737,11 +738,11 @@ const ScheduleView = ({ company, workers }) => {
             <div>{headerDates[i]}</div>
             <div className="flex items-center justify-center gap-3">
               <div className="text-blue-600 font-bold text-xs mt-1">
-                {dailyStaffCounts[dayKey]?.GUARD || "0"}
+                {dailyStaffCounts[dayKey]?.GUARD || "0"}{" "}
                 <span className="font-medium"> G</span>
               </div>
               <div className="text-green-600 font-bold text-xs mt-1">
-                {dailyStaffCounts[dayKey]?.FRONT || "0"}
+                {dailyStaffCounts[dayKey]?.FRONT || "0"}{" "}
                 <span className="font-medium"> F</span>
               </div>
             </div>
@@ -771,6 +772,7 @@ const ScheduleView = ({ company, workers }) => {
       {popoverTarget && (
         <ShiftEditPopover
           targetCell={popoverTarget}
+          presets={presets}
           onSave={handleSaveShift}
           onClose={handleClosePopover}
         />

@@ -133,13 +133,30 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow-sm">
         <nav className="container mx-auto px-6 py-3 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-blue-600">Scheduler</h1>
+          <h1 className="text-xl font-bold text-blue-600">
+            {companyData ? companyData.name : "Scheduler"}
+          </h1>
           {userData && (
             <button
               onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg"
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 focus:outline-none"
+              title="Log Out"
             >
-              Log Out
+              {/* Log out icon (SVG) */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1"
+                />
+              </svg>
             </button>
           )}
         </nav>

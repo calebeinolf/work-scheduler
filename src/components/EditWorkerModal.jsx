@@ -1,7 +1,7 @@
-// src/components/AddWorkerModal.jsx
+// src/components/EditWorkerModal.jsx
 
-import React, { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
+import React, { useState, useEffect } from "react";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 const isMinorCheck = (dobString) => {
@@ -19,15 +19,36 @@ const isMinorCheck = (dobString) => {
   return age < 18;
 };
 
-const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
-  const [fullName, setFullName] = useState("");
-  const [yos, setYos] = useState("");
-  const [dob, setDob] = useState("");
-  const [email, setEmail] = useState(""); // Email is required for matching
-  const [phone, setPhone] = useState("");
-  const [title, setTitle] = useState("Lifeguard");
+const EditWorkerModal = ({ worker, isOpen, onClose }) => {
+  const [formData, setFormData] = useState({
+    fullName: "",
+    yos: "",
+    dob: "",
+    email: "",
+    phone: "",
+    title: "Lifeguard",
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Populate form when a worker is selected
+  useEffect(() => {
+    if (worker) {
+      setFormData({
+        fullName: worker.fullName || "",
+        yos: worker.yos || "",
+        dob: worker.dob || "",
+        email: worker.email || "",
+        phone: worker.phone || "",
+        title: worker.title || "Lifeguard",
+      });
+    }
+  }, [worker]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,42 +56,34 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
     setError("");
 
     try {
-      // Create the unclaimed worker profile in Firestore
-      await addDoc(collection(db, "users"), {
-        companyId: companyId,
-        role: "worker",
-        authUid: null, // Unclaimed until worker joins
-        email: email, // The key field for matching
-        fullName: fullName,
-        yos: parseInt(yos, 10),
-        dob: dob,
-        isMinor: isMinorCheck(dob),
-        title: title,
-        phone: phone, // Optional phone field
-      });
-      handleClose();
+      const workerDocRef = doc(db, "users", worker.uid);
+      const updates = {
+        ...formData,
+        yos: parseInt(formData.yos, 10),
+        isMinor: isMinorCheck(formData.dob),
+      };
+
+      // If the email is changed on a claimed profile, unlink it.
+      if (worker.authUid && worker.email !== formData.email) {
+        updates.authUid = null;
+      }
+
+      await updateDoc(workerDocRef, updates);
+      onClose();
     } catch (err) {
-      setError("Failed to add worker. Please try again.");
-      console.error("Error adding worker:", err);
+      setError("Failed to update worker. Please try again.");
+      console.error("Error updating worker:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setFullName("");
-    setYos("");
-    setDob("");
-    setEmail("");
-    setTitle("Lifeguard");
-    setError("");
-    onClose();
-  };
-
   if (!isOpen) return null;
 
+  const showEmailWarning = worker.authUid && worker.email !== formData.email;
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div
         className="bg-white rounded-lg shadow-xl w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
@@ -78,7 +91,7 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
         <form onSubmit={handleSubmit}>
           <div className="p-6">
             <h3 className="text-2xl font-bold text-gray-800 mb-4">
-              Add New Worker
+              Edit Worker
             </h3>
             {error && (
               <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4 text-center">
@@ -96,11 +109,11 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
                 </label>
                 <input
                   id="fullName"
+                  name="fullName"
                   type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  value={formData.fullName}
+                  onChange={handleChange}
                   required
-                  placeholder="John Smith"
                   className="p-2 border rounded w-full"
                 />
               </div>
@@ -113,47 +126,54 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
                 </label>
                 <input
                   id="email"
+                  name="email"
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={formData.email}
+                  onChange={handleChange}
                   required
-                  placeholder="example@gmail.com"
                   className="p-2 border rounded w-full"
                 />
               </div>
+              {showEmailWarning && (
+                <p className="text-xs text-orange-600 col-span-2 text-center -mt-2">
+                  Warning: Changing the email will unlink this worker's account.
+                  They will need to re-join with the new email.
+                </p>
+              )}
               <div>
                 <label
                   htmlFor="phone"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Worker's Phone (optional)
+                  Phone (optional)
                 </label>
                 <input
                   id="phone"
+                  name="phone"
                   type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="123-456-7890"
+                  value={formData.phone}
+                  onChange={handleChange}
                   className="p-2 border rounded w-full"
                 />
               </div>
               <div>
                 <label
-                  htmlFor="role"
+                  htmlFor="title"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
                   Role
                 </label>
                 <select
-                  id="role"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
                   className="p-2 border bg-white rounded w-full"
                 >
                   <option>Lifeguard</option>
-                  <option>Front Worker</option>
                   <option>Head Guard</option>
                   <option>Assistant Manager</option>
+                  <option>Front Worker</option>
                 </select>
               </div>
               <div>
@@ -165,11 +185,11 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
                 </label>
                 <input
                   id="yos"
+                  name="yos"
                   type="number"
-                  value={yos}
-                  onChange={(e) => setYos(e.target.value)}
+                  value={formData.yos}
+                  onChange={handleChange}
                   required
-                  placeholder="0"
                   className="p-2 border rounded w-full"
                   min="0"
                 />
@@ -184,8 +204,9 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
                 <input
                   type="date"
                   id="dob"
-                  value={dob}
-                  onChange={(e) => setDob(e.target.value)}
+                  name="dob"
+                  value={formData.dob}
+                  onChange={handleChange}
                   required
                   className="w-full p-2 border rounded"
                 />
@@ -195,7 +216,7 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
           <div className="bg-gray-50 p-3 flex justify-end space-x-3 rounded-b-lg">
             <button
               type="button"
-              onClick={handleClose}
+              onClick={onClose}
               className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
             >
               Cancel
@@ -205,7 +226,7 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
               disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
             >
-              {loading ? "Saving..." : "Save Worker"}
+              {loading ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>
@@ -214,4 +235,4 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
   );
 };
 
-export default AddWorkerModal;
+export default EditWorkerModal;

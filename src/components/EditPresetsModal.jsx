@@ -313,7 +313,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
             + Add New Preset
           </button>
         </div>
-        <div className="bg-gray-100 px-6 py-3 flex justify-end space-x-3 rounded-b-lg">
+        <div className="bg-gray-100 p-3 flex justify-end space-x-3 rounded-b-lg">
           <button
             type="button"
             onClick={onClose}

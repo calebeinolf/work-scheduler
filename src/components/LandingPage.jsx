@@ -24,8 +24,8 @@ const LandingPage = () => {
               Create a Company
             </h2>
             <p className="mt-2 text-gray-500">
-              For Head Guards and Managers. Set up your pool and start building
-              your schedule.
+              For the Scheduler. Set up your pool and start building your
+              schedule.
             </p>
           </Link>
 
@@ -44,10 +44,12 @@ const LandingPage = () => {
           </Link>
         </div>
 
-        <div className="my-4 flex gap-2 justify-center items-center">
-          <p className="text-gray-500">Already have an account?</p>
-          <Link to="/login" className="font-medium text-blue-600">
-            Login
+        <div className="my-8 flex flex-col gap-2 justify-center items-center">
+          <p>Already have an account?</p>
+          <Link to="/login">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+              Login
+            </button>
           </Link>
         </div>
       </div>

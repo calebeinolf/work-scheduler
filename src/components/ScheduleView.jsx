@@ -1,8 +1,15 @@
 // src/components/ScheduleView.jsx
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { onSnapshot, doc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  onSnapshot,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
 import { db } from "../firebase";
+import EditWorkerModal from "./EditWorkerModal"; // Import the new modal
 
 // --- Time formatting and calculation helpers ---
 const formatTime12hr = (time24) => {
@@ -21,8 +28,6 @@ const calculateDailyHours = (dayShifts, isMinor) => {
   ) {
     return 0;
   }
-
-  // 1. Convert to minute-based intervals and filter out invalid shifts
   const intervals = dayShifts
     .map((shift) => {
       if (!shift.start || !shift.end) return null;
@@ -31,32 +36,23 @@ const calculateDailyHours = (dayShifts, isMinor) => {
       return { start: startH * 60 + startM, end: endH * 60 + endM };
     })
     .filter(Boolean)
-    .sort((a, b) => a.start - b.start); // Sort intervals by start time
-
+    .sort((a, b) => a.start - b.start);
   if (intervals.length === 0) return 0;
-
-  // 2. Merge overlapping intervals
   const mergedIntervals = [intervals[0]];
   for (let i = 1; i < intervals.length; i++) {
     const lastMerged = mergedIntervals[mergedIntervals.length - 1];
     const current = intervals[i];
     if (current.start < lastMerged.end) {
-      // Check for overlap
       lastMerged.end = Math.max(lastMerged.end, current.end);
     } else {
       mergedIntervals.push(current);
     }
   }
-
-  // 3. Calculate total duration from merged intervals
   let totalMinutes = 0;
   for (const interval of mergedIntervals) {
     totalMinutes += interval.end - interval.start;
   }
-
   let durationInHours = totalMinutes / 60;
-
-  // 4. Apply break logic to the total merged duration
   const breakThreshold = isMinor ? 5 : 8;
   if (durationInHours > breakThreshold) {
     const timeOverThreshold = durationInHours - breakThreshold;
@@ -66,19 +62,16 @@ const calculateDailyHours = (dayShifts, isMinor) => {
       return durationInHours - 0.5;
     }
   }
-
   return durationInHours;
 };
 
 // --- Helper to categorize shifts for counting and highlighting ---
 const getShiftCategory = (shift) => {
   if (!shift || !shift.start || !shift.end) return null;
-  const openingTime = "13:00"; // 1:00 PM
-  const closingTime = "18:00"; // 6:00 PM
-
+  const openingTime = "13:00";
+  const closingTime = "18:00";
   const isOpening = shift.start <= openingTime;
   const isClosing = shift.end >= closingTime;
-
   if (isOpening && isClosing) return "All Day";
   if (isOpening) return "Opening";
   if (isClosing) return "Closing";
@@ -104,7 +97,6 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
         JSON.stringify(initialShift.filter((s) => s.type !== "OFF"))
       );
     }
-
     if (startingShifts.length > 0) {
       setActiveShiftType(startingShifts[0].type);
     } else {
@@ -124,7 +116,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   const handleShiftChange = (index, field, value) => {
     const newShifts = [...shifts];
     newShifts[index][field] = value;
-    if (field === "type") setActiveShiftType(value); // Update active type for filtering presets
+    if (field === "type") setActiveShiftType(value);
     setShifts(newShifts);
   };
 
@@ -155,7 +147,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
 
   const getPopoverStyle = () => {
     if (!targetCell.rect) return { display: "none" };
-    const popoverWidth = 320; // w-80
+    const popoverWidth = 320;
     const popoverHeight = popoverRef.current
       ? popoverRef.current.offsetHeight
       : 300;
@@ -233,6 +225,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-1 justify-center">
+                  {/* This applicablePresets map is supposed to be like this, I changed it on purpose. DO NOT CHANGE! */}
                   {applicablePresets.map((p) => {
                     const isSelected =
                       shift.start === p.start && shift.end === p.end;
@@ -312,8 +305,8 @@ const getSaturdayOfWeek = (d) => {
   return new Date(date.setDate(diff));
 };
 
-// --- New Worker Details Modal Component ---
-const WorkerDetailModal = ({ worker, onClose }) => {
+// --- Worker Details Modal Component ---
+const WorkerDetailModal = ({ worker, onClose, onEdit, onDelete }) => {
   if (!worker) return null;
   return (
     <div
@@ -347,20 +340,32 @@ const WorkerDetailModal = ({ worker, onClose }) => {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="font-semibold text-gray-600">
-                Years of Service:
-              </span>
+              <span className="font-semibold text-gray-600">YOS:</span>
               <span className="text-gray-800">{worker.yos ?? "N/A"}</span>
             </div>
           </div>
         </div>
-        <div className="bg-gray-50 p-4 rounded-b-lg text-right">
+        <div className="bg-gray-50 p-3 flex justify-between rounded-b-lg">
           <button
-            onClick={onClose}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            onClick={() => onDelete(worker.uid)}
+            className="px-4 py-2 bg-red-100 text-red-500 rounded-md hover:bg-red-200"
           >
-            Close
+            Remove
           </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => onEdit(worker)}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+            >
+              Edit
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -538,6 +543,7 @@ const ScheduleView = ({ company, workers, presets }) => {
   const [scheduleData, setScheduleData] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedWorker, setSelectedWorker] = useState(null);
+  const [editingWorker, setEditingWorker] = useState(null); // For edit modal
   const [hoveredCell, setHoveredCell] = useState({ row: null, col: null });
   const [popoverTarget, setPopoverTarget] = useState(null);
   const [revealedHoursWorkerId, setRevealedHoursWorkerId] = useState(null);
@@ -715,6 +721,27 @@ const ScheduleView = ({ company, workers, presets }) => {
     });
   };
 
+  const handleOpenEditModal = (worker) => {
+    setEditingWorker(worker);
+    setSelectedWorker(null); // Close the details modal
+  };
+
+  const handleDeleteWorker = async (workerId) => {
+    if (
+      window.confirm(
+        "Are you sure you want to remove this worker? This action cannot be undone."
+      )
+    ) {
+      try {
+        await deleteDoc(doc(db, "users", workerId));
+        setSelectedWorker(null); // Close the details modal
+      } catch (error) {
+        console.error("Error removing worker: ", error);
+        alert("Failed to remove worker.");
+      }
+    }
+  };
+
   const handleHeaderMouseEnter = (colId) => {
     if (!popoverTarget) setHoveredCell({ row: null, col: colId });
   };
@@ -787,6 +814,13 @@ const ScheduleView = ({ company, workers, presets }) => {
       <WorkerDetailModal
         worker={selectedWorker}
         onClose={() => setSelectedWorker(null)}
+        onEdit={handleOpenEditModal}
+        onDelete={handleDeleteWorker}
+      />
+      <EditWorkerModal
+        worker={editingWorker}
+        isOpen={!!editingWorker}
+        onClose={() => setEditingWorker(null)}
       />
       {popoverTarget && (
         <ShiftEditPopover
@@ -849,7 +883,7 @@ const ScheduleView = ({ company, workers, presets }) => {
           </tbody>
           {sortedFrontWorkers.length > 0 && (
             <>
-              {/* Gap row between sections */}
+              {/* Gap row between sections, I added it on purpose, please DO NOT CHANGE! */}
               <tbody>
                 <tr className="bg-gray-100">
                   <td

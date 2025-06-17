@@ -304,7 +304,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   );
 };
 
-// Helper to get the start of a week (Saturday) for any given date
+// Helper to get the start of a week (Saturday) for any given date DO NOT DELETE
 const getSaturdayOfWeek = (d) => {
   const date = new Date(d);
   const day = date.getDay(); // Sunday - Saturday : 0 - 6
@@ -621,41 +621,58 @@ const ScheduleView = ({ company, workers, presets }) => {
   }, [company, weekStartDate]);
 
   useEffect(() => {
-    if (!scheduleDocId) return;
+    if (!scheduleDocId || workers.length === 0) {
+      // <-- FIXED: Guard clause
+      if (workers.length === 0 && !loading) setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+
     const unsubscribe = onSnapshot(scheduleDocRef, (docSnap) => {
+      let currentShifts = {};
       if (docSnap.exists()) {
-        setScheduleData(docSnap.data().shifts || {});
-      } else {
-        const initialShifts = {};
-        workers.forEach((w) => {
-          if (w.uid) {
-            initialShifts[w.uid] = {
-              sat: null,
-              sun: null,
-              mon: null,
-              tue: null,
-              wed: null,
-              thu: null,
-              fri: null,
-            };
-          }
-        });
-        if (Object.keys(initialShifts).length > 0) {
-          setDoc(scheduleDocRef, {
+        currentShifts = docSnap.data().shifts || {};
+      }
+
+      let needsUpdate = false;
+      const updatedShifts = { ...currentShifts };
+
+      workers.forEach((worker) => {
+        if (worker.uid && !updatedShifts[worker.uid]) {
+          updatedShifts[worker.uid] = {
+            sat: null,
+            sun: null,
+            mon: null,
+            tue: null,
+            wed: null,
+            thu: null,
+            fri: null,
+          };
+          needsUpdate = true;
+        }
+      });
+
+      if (needsUpdate) {
+        setDoc(
+          scheduleDocRef,
+          {
             companyId: company.id,
             weekOf: weekStartDate,
             isPublished: false,
-            shifts: initialShifts,
-          });
-        }
-        setScheduleData(initialShifts);
+            shifts: updatedShifts,
+          },
+          { merge: true }
+        );
       }
+
+      setScheduleData(updatedShifts);
       setLoading(false);
     });
+
     return () => unsubscribe();
-  }, [scheduleDocId, workers, company, weekStartDate]);
+  }, [scheduleDocId, workers, company, weekStartDate, loading]); // Added loading to dependency array
 
   const handleCellClick = (event, worker, day) => {
     event.stopPropagation();

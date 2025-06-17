@@ -386,7 +386,7 @@ const WorkerRow = ({
       popoverTarget.worker.uid === worker.uid &&
       popoverTarget.day === colKey
     ) {
-      return "bg-gray-800 text-white";
+      return "bg-gray-800";
     }
     const isRowHovered = hoveredCell.row === worker.uid;
     const isColHovered = hoveredCell.col === colKey;

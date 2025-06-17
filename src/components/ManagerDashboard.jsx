@@ -97,13 +97,13 @@ const ManagerDashboard = ({ user, company }) => {
           <div className="flex gap-2">
             <button
               onClick={() => setIsPresetsModalOpen(true)}
-              className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg"
+              className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg"
             >
               Edit Presets
             </button>
             <button
               onClick={() => setIsAddWorkerModalOpen(true)}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200"
             >
               + Add Worker
             </button>

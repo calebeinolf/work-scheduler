@@ -437,7 +437,7 @@ const WorkerRow = ({
   return (
     <tr key={worker.uid}>
       <td
-        className={`p-1 border font-medium cursor-pointer transition-colors duration-150 ${getCellClass(
+        className={`p-1 border font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto cursor-pointer transition-colors duration-150 ${getCellClass(
           "name"
         )}`}
         onClick={() => onWorkerClick(worker)}
@@ -616,13 +616,15 @@ const ScheduleView = ({ company, workers, presets }) => {
 
   const scheduleDocId = useMemo(() => {
     if (!company?.id) return null;
-    const weekId = weekStartDate.toISOString().split("T")[0];
+    const year = weekStartDate.getFullYear();
+    const month = String(weekStartDate.getMonth() + 1).padStart(2, "0");
+    const day = String(weekStartDate.getDate()).padStart(2, "0");
+    const weekId = `${year}-${month}-${day}`;
     return `${company.id}_${weekId}`;
   }, [company, weekStartDate]);
 
   useEffect(() => {
     if (!scheduleDocId || workers.length === 0) {
-      // <-- FIXED: Guard clause
       if (workers.length === 0 && !loading) setLoading(false);
       return;
     }
@@ -672,7 +674,7 @@ const ScheduleView = ({ company, workers, presets }) => {
     });
 
     return () => unsubscribe();
-  }, [scheduleDocId, workers, company, weekStartDate, loading]); // Added loading to dependency array
+  }, [scheduleDocId, workers, company, weekStartDate, loading]);
 
   const handleCellClick = (event, worker, day) => {
     event.stopPropagation();
@@ -731,7 +733,7 @@ const ScheduleView = ({ company, workers, presets }) => {
     return (
       <tr className="bg-gray-100">
         <th
-          className={`p-2 border text-left text-sm font-semibold text-gray-600 min-w-[160px] bg-gray-100`}
+          className={`p-2 border text-left text-sm font-semibold text-gray-600 min-w-[150px] max-w-[250px] bg-gray-100`}
           onMouseEnter={() => handleHeaderMouseEnter("name")}
         >
           Worker
@@ -846,23 +848,37 @@ const ScheduleView = ({ company, workers, presets }) => {
             )}
           </tbody>
           {sortedFrontWorkers.length > 0 && (
-            <tbody className="border-t-4 border-gray-300">
-              {sortedFrontWorkers.map((worker) => (
-                <WorkerRow
-                  key={worker.uid}
-                  worker={worker}
-                  scheduleData={scheduleData}
-                  onWorkerClick={setSelectedWorker}
-                  hoveredCell={hoveredCell}
-                  popoverTarget={popoverTarget}
-                  onCellEnter={setHoveredCell}
-                  onCellClick={handleCellClick}
-                  revealedHoursWorkerId={revealedHoursWorkerId}
-                  onRevealHoursStart={setRevealedHoursWorkerId}
-                  onRevealHoursEnd={() => setRevealedHoursWorkerId(null)}
-                />
-              ))}
-            </tbody>
+            <>
+              {/* Gap row between sections */}
+              <tbody>
+                <tr className="bg-gray-100">
+                  <td
+                    colSpan="10"
+                    className={`p-2 pt-4 border text-left text-sm font-semibold text-gray-600`}
+                    onMouseEnter={() => handleHeaderMouseEnter("name")}
+                  >
+                    Front Workers
+                  </td>
+                </tr>
+              </tbody>
+              <tbody>
+                {sortedFrontWorkers.map((worker) => (
+                  <WorkerRow
+                    key={worker.uid}
+                    worker={worker}
+                    scheduleData={scheduleData}
+                    onWorkerClick={setSelectedWorker}
+                    hoveredCell={hoveredCell}
+                    popoverTarget={popoverTarget}
+                    onCellEnter={setHoveredCell}
+                    onCellClick={handleCellClick}
+                    revealedHoursWorkerId={revealedHoursWorkerId}
+                    onRevealHoursStart={setRevealedHoursWorkerId}
+                    onRevealHoursEnd={() => setRevealedHoursWorkerId(null)}
+                  />
+                ))}
+              </tbody>
+            </>
           )}
         </table>
       </div>

@@ -151,9 +151,9 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
                   className="p-2 border bg-white rounded w-full"
                 >
                   <option>Lifeguard</option>
+                  <option>Front Worker</option>
                   <option>Head Guard</option>
                   <option>Assistant Manager</option>
-                  <option>Front Worker</option>
                 </select>
               </div>
               <div>

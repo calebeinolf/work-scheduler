@@ -85,7 +85,7 @@ const ManagerDashboard = ({ user, company }) => {
         </div>
 
         {/* Right side with company code and Add Worker button */}
-        <div className="text-right flex gap-2">
+        <div className="text-right flex gap-2 flex-wrap justify-end">
           <div className="p-2 rounded-lg flex items-center no-wrap gap-2 bg-white">
             <span className="text-sm text-nowrap font-semibold text-gray-600">
               Company Code:{" "}
@@ -103,7 +103,7 @@ const ManagerDashboard = ({ user, company }) => {
             </button>
             <button
               onClick={() => setIsAddWorkerModalOpen(true)}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium text-nowrap py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-200"
             >
               + Add Worker
             </button>

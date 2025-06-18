@@ -1,12 +1,14 @@
-# React + Vite
+# Work Scheduler
+At the moment, specifically made for scheduling lifeguards at the pool I work at. We currently use Google Sheets and it takes forever to schedule guards. Plus, we have to ask for days off using a paper - pretty inconvenient.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# About
+Easily add shifts to a spreadsheet-style view by clicking onn the cell to edit the shift(s).
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# Features
+- Calculates total weekly hours for each worker automatically
+- Calculates how may guards/front workers are working that day (morning/evening)
+- Shift time presets based on seleceted role
+- Can select a multiple of workers to complete an action for them all at once
+- Undo/Redo buttons for changes made to shifts
+- Workers log in with their email, the company code, and a password and are automatically synced to the worker profile with that email 
+- Supports multiple companies

@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import EditWorkerModal from "./EditWorkerModal"; // Import the new modal
-import { Redo2, Undo2 } from "lucide-react";
+import { Calendar, Redo, Redo2, Undo, Undo2 } from "lucide-react";
 
 // --- Time formatting and calculation helpers ---
 const formatTime12hr = (time24) => {
@@ -558,7 +558,6 @@ const WorkerRow = ({
 
 const ScheduleView = ({ company, workers, presets }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [scheduleData, setScheduleData] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [editingWorker, setEditingWorker] = useState(null);
@@ -566,6 +565,16 @@ const ScheduleView = ({ company, workers, presets }) => {
   const [popoverTarget, setPopoverTarget] = useState(null);
   const [revealedHoursWorkerId, setRevealedHoursWorkerId] = useState(null);
   const [selectedWorkers, setSelectedWorkers] = useState([]);
+
+  const [history, setHistory] = useState([{}]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const scheduleData = useMemo(
+    () => history[historyIndex] || {},
+    [history, historyIndex]
+  );
+
+  // Ref to track if the current update is from a local action (undo/redo/save)
+  const isLocalUpdateRef = useRef(false);
 
   const weekStartDate = useMemo(
     () => getSaturdayOfWeek(currentDate),
@@ -654,18 +663,29 @@ const ScheduleView = ({ company, workers, presets }) => {
       return;
     }
 
-    setLoading(true);
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
 
     const unsubscribe = onSnapshot(scheduleDocRef, (docSnap) => {
+      // If the update came from a local action, don't reset history
+      if (isLocalUpdateRef.current) {
+        isLocalUpdateRef.current = false; // Reset the flag
+        return;
+      }
+
       let currentShifts = {};
       if (docSnap.exists()) {
         currentShifts = docSnap.data().shifts || {};
       }
 
-      let needsUpdate = false;
-      const updatedShifts = { ...currentShifts };
+      // Deep compare to see if data from server is actually different
+      if (
+        JSON.stringify(currentShifts) === JSON.stringify(history[historyIndex])
+      ) {
+        return;
+      }
 
+      const updatedShifts = { ...currentShifts };
+      let needsUpdate = false;
       workers.forEach((worker) => {
         if (worker.uid && !updatedShifts[worker.uid]) {
           updatedShifts[worker.uid] = {
@@ -694,12 +714,19 @@ const ScheduleView = ({ company, workers, presets }) => {
         );
       }
 
-      setScheduleData(updatedShifts);
+      setHistory([updatedShifts]);
+      setHistoryIndex(0);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [scheduleDocId, workers, company, weekStartDate, loading]);
+  }, [scheduleDocId, workers, company, weekStartDate]);
+
+  const pushNewState = (newShifts) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    setHistory([...newHistory, newShifts]);
+    setHistoryIndex(newHistory.length);
+  };
 
   const handleToggleSelectWorker = (workerId) => {
     setSelectedWorkers((prev) =>
@@ -717,53 +744,59 @@ const ScheduleView = ({ company, workers, presets }) => {
     }
   };
 
+  const handleToggleFrontSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedWorkers([
+        ...selectedWorkers,
+        ...workers
+          .filter(
+            (w) =>
+              w.title === "Front Worker" && !selectedWorkers.includes(w.uid)
+          )
+          .map((w) => w.uid),
+      ]);
+    } else {
+      setSelectedWorkers(
+        selectedWorkers.filter(
+          (uid) =>
+            !workers.some((w) => w.title === "Front Worker" && w.uid === uid)
+        )
+      );
+    }
+  };
+
   const handleBulkUpdate = async (updateValue) => {
     if (selectedWorkers.length === 0 || !scheduleDocId) return;
 
-    const batch = writeBatch(db);
-    const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-
-    const updates = {};
+    isLocalUpdateRef.current = true;
+    const newScheduleData = JSON.parse(JSON.stringify(scheduleData));
     const days = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
     selectedWorkers.forEach((workerId) => {
       days.forEach((day) => {
-        updates[`shifts.${workerId}.${day}`] = updateValue;
+        if (!newScheduleData[workerId]) newScheduleData[workerId] = {};
+        newScheduleData[workerId][day] = updateValue;
       });
     });
 
-    batch.update(scheduleDocRef, updates);
-
-    try {
-      await batch.commit();
-      setSelectedWorkers([]); // Clear selection after action
-    } catch (error) {
-      console.error("Bulk update failed:", error);
-      alert("Failed to update shifts.");
-    }
+    pushNewState(newScheduleData);
+    const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+    await updateDoc(scheduleDocRef, { shifts: newScheduleData });
+    setSelectedWorkers([]);
   };
 
   const handleBulkRemove = async () => {
     if (selectedWorkers.length === 0) return;
     if (
       window.confirm(
-        `Are you sure you want to remove ${
-          selectedWorkers.length
-        } worker(s) from ${company?.name || "this company"}? This is permanent.`
+        `Are you sure you want to remove ${selectedWorkers.length} worker(s)? This is permanent.`
       )
     ) {
       const batch = writeBatch(db);
       selectedWorkers.forEach((workerId) => {
-        const workerDocRef = doc(db, "users", workerId);
-        batch.delete(workerDocRef);
+        batch.delete(doc(db, "users", workerId));
       });
-
-      try {
-        await batch.commit();
-        setSelectedWorkers([]);
-      } catch (error) {
-        console.error("Bulk remove failed:", error);
-        alert("Failed to remove workers.");
-      }
+      await batch.commit();
+      setSelectedWorkers([]);
     }
   };
 
@@ -787,15 +820,16 @@ const ScheduleView = ({ company, workers, presets }) => {
   const handleSaveShift = async (newShiftData) => {
     if (!popoverTarget || !scheduleDocId) return;
     const { worker, day } = popoverTarget;
+
+    isLocalUpdateRef.current = true;
+    const newScheduleData = JSON.parse(JSON.stringify(scheduleData));
+    if (!newScheduleData[worker.uid]) newScheduleData[worker.uid] = {};
+    newScheduleData[worker.uid][day] = newShiftData;
+
+    pushNewState(newScheduleData);
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-    const fieldPath = `shifts.${worker.uid}.${day}`;
-    try {
-      await updateDoc(scheduleDocRef, { [fieldPath]: newShiftData });
-    } catch (error) {
-      console.error("Failed to save shift:", error);
-    } finally {
-      handleClosePopover();
-    }
+    await updateDoc(scheduleDocRef, { shifts: newScheduleData });
+    handleClosePopover();
   };
 
   const handleWeekChange = (weeks) => {
@@ -831,6 +865,28 @@ const ScheduleView = ({ company, workers, presets }) => {
     if (!popoverTarget) setHoveredCell({ row: null, col: colId });
   };
 
+  const handleUndo = async () => {
+    if (historyIndex > 0) {
+      isLocalUpdateRef.current = true;
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      const prevState = history[newIndex];
+      const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+      await updateDoc(scheduleDocRef, { shifts: prevState });
+    }
+  };
+
+  const handleRedo = async () => {
+    if (historyIndex < history.length - 1) {
+      isLocalUpdateRef.current = true;
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      const nextState = history[newIndex];
+      const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+      await updateDoc(scheduleDocRef, { shifts: nextState });
+    }
+  };
+
   const renderWeekHeader = () => {
     const days = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
     const displayDays = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -850,8 +906,7 @@ const ScheduleView = ({ company, workers, presets }) => {
             className="rounded"
             onChange={handleToggleSelectAll}
             checked={
-              selectedWorkers.length > 0 &&
-              selectedWorkers.length === workers.length
+              workers.length > 0 && selectedWorkers.length === workers.length
             }
           />
         </th>
@@ -905,6 +960,27 @@ const ScheduleView = ({ company, workers, presets }) => {
   const weekEndDate = new Date(weekStartDate);
   weekEndDate.setDate(weekStartDate.getDate() + 6);
 
+  const formatWeekRange = (start, end) => {
+    const month = start.toLocaleString("default", { month: "long" });
+    const startDay = start.getDate();
+    const endDay = end.getDate();
+    return `${month} ${startDay}-${endDay}`;
+  };
+
+  // Helper to check if the current week is the actual current week
+  const isCurrentWeek = useMemo(() => {
+    const today = getSaturdayOfWeek(new Date());
+    return (
+      weekStartDate.getFullYear() === today.getFullYear() &&
+      weekStartDate.getMonth() === today.getMonth() &&
+      weekStartDate.getDate() === today.getDate()
+    );
+  }, [weekStartDate]);
+
+  const handleGoToCurrentWeek = () => {
+    setCurrentDate(new Date());
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg">
       <WorkerDetailModal
@@ -926,30 +1002,63 @@ const ScheduleView = ({ company, workers, presets }) => {
           onClose={handleClosePopover}
         />
       )}
+
       <div className="flex justify-between items-center mb-4">
-        <button
-          onClick={() => handleWeekChange(-1)}
-          className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-        >
-          &larr; Previous
-        </button>
-        <h3 className="text-xl font-bold text-center">
-          Week of {weekStartDate.toLocaleDateString()} -{" "}
-          {weekEndDate.toLocaleDateString()}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => handleWeekChange(-1)}
+            className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+          >
+            &larr; Previous
+          </button>
+
+          <button
+            className={`flex items-center gap-2 text-blue-500 ${
+              (isCurrentWeek ||
+                weekStartDate < getSaturdayOfWeek(new Date())) &&
+              "opacity-0"
+            }`}
+            onClick={handleGoToCurrentWeek}
+          >
+            <Undo width={15} />
+            <span className="text-sm">Back to this week</span>
+          </button>
+        </div>
+
+        <h3 className="text-xl font-medium text-center">
+          {formatWeekRange(weekStartDate, weekEndDate)}
         </h3>
-        <button
-          onClick={() => handleWeekChange(1)}
-          className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-        >
-          Next &rarr;
-        </button>
+
+        <div className="flex items-center gap-4">
+          <button
+            className={`flex items-center gap-2 text-blue-500 ${
+              (isCurrentWeek ||
+                weekStartDate > getSaturdayOfWeek(new Date())) &&
+              "opacity-0"
+            }`}
+            onClick={handleGoToCurrentWeek}
+          >
+            <span className="text-sm">Back to this week</span>
+            <Redo width={15} />
+          </button>
+
+          <button
+            onClick={() => handleWeekChange(1)}
+            className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+          >
+            Next &rarr;
+          </button>
+        </div>
       </div>
 
-      {/* Bulk actions bar */}
       <BulkActionsBar
         selectedWorkers={selectedWorkers}
         handleBulkUpdate={handleBulkUpdate}
         handleBulkRemove={handleBulkRemove}
+        handleUndo={handleUndo}
+        handleRedo={handleRedo}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
       />
 
       <div className="overflow-x-auto">
@@ -991,10 +1100,23 @@ const ScheduleView = ({ company, workers, presets }) => {
             <>
               {/* Gap row between sections, I added it on purpose, please DO NOT REMOVE! */}
               <tbody>
-                <tr className="bg-gray-100">
+                <tr className="bg-gray-100 text-center">
+                  <td className="p-2 pt-5">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      onChange={handleToggleFrontSelectAll}
+                      checked={
+                        sortedFrontWorkers.length > 0 &&
+                        sortedFrontWorkers.every((fw) =>
+                          selectedWorkers.includes(fw.uid)
+                        )
+                      }
+                    />
+                  </td>
                   <td
                     colSpan="10"
-                    className={`p-2 pt-4 border text-left text-sm font-semibold text-gray-600`}
+                    className={`p-2 pt-5 border text-left text-sm font-semibold text-gray-600`}
                     onMouseEnter={() => handleHeaderMouseEnter("name")}
                   >
                     Front Workers
@@ -1033,6 +1155,10 @@ const BulkActionsBar = ({
   selectedWorkers,
   handleBulkUpdate,
   handleBulkRemove,
+  handleUndo,
+  handleRedo,
+  canUndo,
+  canRedo,
 }) => {
   const [showMenu, setShowMenu] = React.useState(false);
   const menuRef = React.useRef(null);
@@ -1065,15 +1191,17 @@ const BulkActionsBar = ({
       </span>
       <div className="flex items-center gap-2 relative">
         <button
-          className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-gray-50 `disabled:opacity-50`"
-          disabled={false}
+          onClick={handleUndo}
+          disabled={!canUndo}
+          className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-gray-50 disabled:opacity-50"
         >
           <Undo2 width={15} />
           <span className="text-sm">Undo</span>
         </button>
         <button
+          onClick={handleRedo}
+          disabled={!canRedo}
           className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-gray-50 disabled:opacity-50"
-          disabled={false}
         >
           <span className="text-sm">Redo</span>
           <Redo2 width={15} />

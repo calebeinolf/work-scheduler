@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import EditWorkerModal from "./EditWorkerModal"; // Import the new modal
+import { Redo2, Undo2 } from "lucide-react";
 
 // --- Time formatting and calculation helpers ---
 const formatTime12hr = (time24) => {
@@ -1064,8 +1065,22 @@ const BulkActionsBar = ({
       </span>
       <div className="flex items-center gap-2 relative">
         <button
+          className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-gray-50 `disabled:opacity-50`"
+          disabled={false}
+        >
+          <Undo2 width={15} />
+          <span className="text-sm">Undo</span>
+        </button>
+        <button
+          className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-gray-50 disabled:opacity-50"
+          disabled={false}
+        >
+          <span className="text-sm">Redo</span>
+          <Redo2 width={15} />
+        </button>
+        <button
           onClick={() => handleBulkUpdate([{ type: "OFF" }])}
-          className={`px-3 py-1 text-sm rounded-md ${
+          className={`px-3 h-7 text-sm rounded-md ${
             selectedWorkers.length === 0
               ? "opacity-50 !cursor-default"
               : "text-red-500 bg-red-100 hover:bg-red-200 !cursor-pointer"
@@ -1076,7 +1091,7 @@ const BulkActionsBar = ({
         </button>
         <button
           onClick={() => handleBulkUpdate(null)}
-          className={`px-3 py-1 text-sm rounded-md !cursor-default ${
+          className={`px-3 h-7 text-sm rounded-md !cursor-default ${
             selectedWorkers.length === 0
               ? "opacity-50 !cursor-default"
               : "bg-gray-100 hover:bg-gray-200 !cursor-pointer"

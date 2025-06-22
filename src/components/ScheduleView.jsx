@@ -22,7 +22,9 @@ import {
   X,
   Send, // Publish Icon
   EyeOff, // Unpublish Icon
-  CloudUpload, // Publish Changes Icon
+  CloudUpload,
+  ChevronsLeft,
+  ChevronsRight, // Publish Changes Icon
 } from "lucide-react";
 
 // --- Time formatting and calculation helpers ---
@@ -188,7 +190,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   return (
     <div
       ref={popoverRef}
-      className="absolute z-20 bg-white rounded-lg shadow-2xl border p-3 w-80"
+      className="absolute z-50 bg-white rounded-lg shadow-2xl border p-3 w-80"
       style={getPopoverStyle()}
     >
       <div className="space-y-3">
@@ -413,6 +415,8 @@ const WorkerRow = ({
   isSelected,
   onToggleSelect,
   isManager,
+  currentUserId,
+  currentUserRole,
 }) => {
   const getCellClass = (colKey) => {
     if (isSelected && isManager) return ""; // Selection highlight takes priority, disable hover highlight
@@ -469,10 +473,20 @@ const WorkerRow = ({
     return totalHours;
   }, [weeklyShifts, worker.isMinor]);
 
+  // Determine if this row should be highlighted for the current user (worker, not head manager)
+  const isCurrentUserWorker =
+    currentUserId === worker.uid &&
+    currentUserRole &&
+    currentUserRole.toLowerCase() !== "head manager";
+
   return (
     <tr
       key={worker.uid}
-      className={`${isSelected && isManager ? "bg-indigo-200" : "bg-white"}`}
+      className={`${
+        (isSelected && isManager) || isCurrentUserWorker
+          ? "bg-indigo-200"
+          : "bg-white"
+      }`}
     >
       {isManager && (
         <td className="p-1 border text-center">
@@ -646,7 +660,14 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
   );
 };
 
-const ScheduleView = ({ company, workers, presets, isManager = true }) => {
+const ScheduleView = ({
+  company,
+  workers,
+  presets,
+  isManager = true,
+  currentUserId,
+  currentUserRole,
+}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [selectedWorker, setSelectedWorker] = useState(null);
@@ -1087,8 +1108,6 @@ const ScheduleView = ({ company, workers, presets, isManager = true }) => {
         `${displayDays[i]} ${dayDate.getMonth() + 1}/${dayDate.getDate()}`
       );
     }
-    // ... (rest of the renderWeekHeader method is unchanged)
-    const headerColSpan = isManager ? "10" : "9";
 
     if (forPrint) {
       return `
@@ -1352,8 +1371,6 @@ const ScheduleView = ({ company, workers, presets, isManager = true }) => {
     setCurrentDate(new Date());
   };
 
-  const headerColSpan = isManager ? "11" : "10";
-
   return (
     <div className="pb-24">
       {isManager && (
@@ -1398,12 +1415,12 @@ const ScheduleView = ({ company, workers, presets, isManager = true }) => {
             }`}
             onClick={handleGoToCurrentWeek}
           >
-            <Undo width={15} />
-            <span className="text-sm font-medium">Back to this week</span>
+            <ChevronsLeft width={15} />
+            {/* <span className="text-sm font-medium">Back to this week</span> */}
           </button>
         </div>
 
-        <h3 className="text-xl font-medium text-center">
+        <h3 className="text-2xl font-medium text-center">
           {formatWeekRange(weekStartDate, weekEndDate)}
         </h3>
 
@@ -1415,8 +1432,8 @@ const ScheduleView = ({ company, workers, presets, isManager = true }) => {
             }`}
             onClick={handleGoToCurrentWeek}
           >
-            <span className="text-sm font-medium">Back to this week</span>
-            <Redo width={15} />
+            {/* <span className="text-sm font-medium">Back to this week</span> */}
+            <ChevronsRight width={15} />
           </button>
 
           <button
@@ -1467,7 +1484,7 @@ const ScheduleView = ({ company, workers, presets, isManager = true }) => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={headerColSpan} className="text-center p-4">
+                  <td colSpan={10} className="text-center p-4">
                     Loading schedule...
                   </td>
                 </tr>
@@ -1488,6 +1505,8 @@ const ScheduleView = ({ company, workers, presets, isManager = true }) => {
                     isSelected={selectedWorkers.includes(worker.uid)}
                     onToggleSelect={handleToggleSelectWorker}
                     isManager={isManager}
+                    currentUserId={currentUserId}
+                    currentUserRole={currentUserRole}
                   />
                 ))
               )}
@@ -1514,7 +1533,7 @@ const ScheduleView = ({ company, workers, presets, isManager = true }) => {
                       </td>
                     )}
                     <td
-                      colSpan={isManager ? "10" : "9"}
+                      colSpan={10}
                       className={`p-2 pt-5 border text-left text-sm font-semibold text-gray-600`}
                     >
                       Front Workers
@@ -1538,6 +1557,8 @@ const ScheduleView = ({ company, workers, presets, isManager = true }) => {
                       isSelected={selectedWorkers.includes(worker.uid)}
                       onToggleSelect={handleToggleSelectWorker}
                       isManager={isManager}
+                      currentUserId={currentUserId}
+                      currentUserRole={currentUserRole}
                     />
                   ))}
                 </tbody>

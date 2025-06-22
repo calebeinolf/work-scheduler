@@ -36,16 +36,15 @@ const WorkerDashboard = ({ user, company }) => {
     return () => unsubscribeWorkers();
   }, [company]);
 
+  console.log(user);
+
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold text-gray-800">Worker Dashboard</h2>
-        <p className="mt-1 text-gray-600">
-          Welcome, {user.fullName || user.email}!
-        </p>
-      </div>
+      {/* <h2 className="text-3xl font-bold text-gray-800">
+        Welcome, {user.fullName || user.email}
+      </h2> */}
 
-      <div className="mt-6">
+      <div className="">
         {loading ? (
           <div className="p-6 text-center">
             <p className="text-gray-500">Loading schedule...</p>
@@ -56,6 +55,8 @@ const WorkerDashboard = ({ user, company }) => {
             workers={workers}
             presets={[]} // Presets are not needed for worker view
             isManager={false} // This ensures the view is read-only
+            currentUserId={user.id}
+            currentUserRole={user.role}
           />
         )}
       </div>

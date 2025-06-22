@@ -76,24 +76,13 @@ const ManagerDashboard = ({ user, company }) => {
 
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800">
+          <h2 className="text-2xl font-semibold text-gray-800">
             Manager Dashboard
           </h2>
-          <p className="mt-1 text-gray-600">
-            Welcome, {user.fullName || user.email}!
-          </p>
         </div>
 
         {/* Right side with company code and Add Worker button */}
         <div className="text-right flex gap-2 flex-wrap justify-end">
-          <div className="p-2 rounded-lg flex items-center no-wrap gap-2 bg-gray-100 inset-shadow-sm">
-            <span className="text-sm text-nowrap font-semibold text-gray-600">
-              Company Code:{" "}
-            </span>
-            <span className="text-sm text-nowrap font-bold text-blue-600 tracking-wider">
-              {company.joinCode}
-            </span>
-          </div>
           <div className="flex gap-2">
             <button
               onClick={() => setIsPresetsModalOpen(true)}
@@ -121,6 +110,8 @@ const ManagerDashboard = ({ user, company }) => {
           workers={workers}
           presets={presets}
           isManager={true}
+          currentUserId={user.uid}
+          currentUserRole={user.role}
         />
       )}
     </div>

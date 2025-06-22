@@ -19,6 +19,7 @@ import {
   Redo2,
   Undo,
   Undo2,
+  X,
 } from "lucide-react";
 
 // --- Time formatting and calculation helpers ---
@@ -27,7 +28,7 @@ const formatTime12hr = (time24) => {
   const [hours, minutes] = time24.split(":");
   const h = parseInt(hours, 10);
   const newHours = h % 12 === 0 ? 12 : h % 12;
-  return `${newHours}:${minutes}`;
+  return `${newHours}:${minutes.padStart(2, "0")}`;
 };
 
 const calculateDailyHours = (dayShifts, isMinor) => {
@@ -94,11 +95,6 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   const [shifts, setShifts] = useState([]);
   const [editingCustomIndex, setEditingCustomIndex] = useState(null);
   const popoverRef = useRef(null);
-  const [activeShiftType, setActiveShiftType] = useState("GUARD");
-
-  const applicablePresets = useMemo(() => {
-    return presets.filter((p) => p.applicableTo.includes(activeShiftType));
-  }, [presets, activeShiftType]);
 
   useEffect(() => {
     let startingShifts = [];
@@ -107,9 +103,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
         JSON.stringify(initialShift.filter((s) => s.type !== "OFF"))
       );
     }
-    if (startingShifts.length > 0) {
-      setActiveShiftType(startingShifts[0].type);
-    } else {
+    if (startingShifts.length === 0) {
       let defaultType = "GUARD";
       if (worker) {
         const title = worker.title.toLowerCase();
@@ -117,7 +111,6 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
           defaultType = "MANAGER";
         else if (title.includes("front")) defaultType = "FRONT";
       }
-      setActiveShiftType(defaultType);
       startingShifts.push({ start: "09:00", end: "17:00", type: defaultType });
     }
     setShifts(startingShifts);
@@ -126,7 +119,6 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   const handleShiftChange = (index, field, value) => {
     const newShifts = [...shifts];
     newShifts[index][field] = value;
-    if (field === "type") setActiveShiftType(value);
     setShifts(newShifts);
   };
 
@@ -139,9 +131,11 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   };
 
   const addShift = () => {
+    const lastShiftType =
+      shifts.length > 0 ? shifts[shifts.length - 1].type : "GUARD";
     setShifts([
       ...shifts,
-      { start: "09:00", end: "17:00", type: activeShiftType },
+      { start: "09:00", end: "17:00", type: lastShiftType },
     ]);
   };
 
@@ -196,85 +190,88 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
     >
       <div className="space-y-3">
         <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-          {shifts.map((shift, index) => (
-            <div
-              key={index}
-              className="p-2 border rounded-md space-y-2 bg-gray-50 relative"
-            >
-              <select
-                value={shift.type}
-                onChange={(e) =>
-                  handleShiftChange(index, "type", e.target.value)
-                }
-                className="w-full p-1 border rounded-md bg-white"
+          {shifts.map((shift, index) => {
+            const applicablePresets = presets.filter((p) =>
+              p.applicableTo.includes(shift.type)
+            );
+            return (
+              <div
+                key={index}
+                className="p-2 border rounded-md space-y-2 bg-gray-50 relative"
               >
-                <option>GUARD</option>
-                <option>MANAGER</option>
-                <option>FRONT</option>
-                <option>LESSONS</option>
-              </select>
-              {editingCustomIndex === index ? (
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="time"
-                    value={shift.start}
-                    onChange={(e) =>
-                      handleShiftChange(index, "start", e.target.value)
-                    }
-                    className="w-full p-1 border rounded-md"
-                  />
-                  <span>-</span>
-                  <input
-                    type="time"
-                    value={shift.end}
-                    onChange={(e) =>
-                      handleShiftChange(index, "end", e.target.value)
-                    }
-                    className="w-full p-1 border rounded-md"
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-center gap-1 justify-center">
-                  {/* This applicablePresets map is supposed to be like this, I changed it on purpose. DO NOT CHANGE! */}
-                  {applicablePresets.map((p) => {
-                    const isSelected =
-                      shift.start === p.start && shift.end === p.end;
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => handlePredefinedClick(index, p)}
-                        className={`text-xs px-2 py-1 rounded ${
-                          isSelected
-                            ? "bg-black text-white"
-                            : "bg-gray-200 hover:bg-blue-200"
-                        }`}
-                      >
-                        {/* This label is supposed to be like this, don't change it */}
-                        {`${formatTime12hr(p.start).replace(
-                          /:00$/,
-                          ""
-                        )}-${formatTime12hr(p.end).replace(/:00$/, "")}`}
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => setEditingCustomIndex(index)}
-                    className="text-xs px-2 py-1 bg-gray-200 hover:bg-blue-200 rounded"
-                  >
-                    Custom
-                  </button>
-                </div>
-              )}
-              {shifts.length > 1 && (
-                <button
-                  onClick={() => removeShift(index)}
-                  className="absolute -top-1 -right-2 bg-red-500 z-100 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs"
+                <select
+                  value={shift.type}
+                  onChange={(e) =>
+                    handleShiftChange(index, "type", e.target.value)
+                  }
+                  className="w-full p-1 border rounded-md bg-white"
                 >
-                  &times;
-                </button>
-              )}
-            </div>
-          ))}
+                  <option>GUARD</option>
+                  <option>MANAGER</option>
+                  <option>FRONT</option>
+                  <option>LESSONS</option>
+                </select>
+                {editingCustomIndex === index ? (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="time"
+                      value={shift.start}
+                      onChange={(e) =>
+                        handleShiftChange(index, "start", e.target.value)
+                      }
+                      className="w-full p-1 border rounded-md"
+                    />
+                    <span>-</span>
+                    <input
+                      type="time"
+                      value={shift.end}
+                      onChange={(e) =>
+                        handleShiftChange(index, "end", e.target.value)
+                      }
+                      className="w-full p-1 border rounded-md"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-1 justify-center">
+                    {applicablePresets.map((p) => {
+                      const isSelected =
+                        shift.start === p.start && shift.end === p.end;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => handlePredefinedClick(index, p)}
+                          className={`text-xs px-2 py-1 rounded ${
+                            isSelected
+                              ? "bg-black text-white"
+                              : "bg-gray-200 hover:bg-blue-200"
+                          }`}
+                        >
+                          {`${formatTime12hr(p.start).replace(
+                            /:00$/,
+                            ""
+                          )}-${formatTime12hr(p.end).replace(/:00$/, "")}`}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => setEditingCustomIndex(index)}
+                      className="text-xs px-2 py-1 bg-gray-200 hover:bg-blue-200 rounded"
+                    >
+                      Custom
+                    </button>
+                  </div>
+                )}
+                {shifts.length > 1 && (
+                  <button
+                    onClick={() => removeShift(index)}
+                    className="absolute -top-1 -right-2 bg-red-500 z-100 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
         <button
           onClick={addShift}
@@ -553,7 +550,7 @@ const WorkerRow = ({
       })}
       <td
         className={`p-1 border ${
-          weeklyTotal > 40 && "text-red-500"
+          weeklyTotal > 40 && "text-red-500 bg-red-50 border-black"
         } text-center font-medium cursor-pointer transition-colors duration-150 ${getCellClass(
           "total"
         )}`}
@@ -568,6 +565,67 @@ const WorkerRow = ({
   );
 };
 
+const FloatingPresetChip = ({ preset, position }) => {
+  if (!preset) return null;
+  return (
+    <div
+      className="fixed z-50 pointer-events-none bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg"
+      style={{ top: position.y + 10, left: position.x + 10 }}
+    >
+      {`${formatTime12hr(preset.start).replace(/:00$/, "")}-${formatTime12hr(
+        preset.end
+      ).replace(/:00$/, "")}`}
+    </div>
+  );
+};
+
+const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
+  const [selectedRole, setSelectedRole] = useState("GUARD");
+  const applicablePresets = presets.filter((p) =>
+    p.applicableTo.includes(selectedRole)
+  );
+
+  return (
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-auto bg-gray-800/90 backdrop-blur-sm text-white p-2 rounded-t-lg shadow-2xl flex items-center gap-2 z-40">
+      <select
+        value={selectedRole}
+        onChange={(e) => setSelectedRole(e.target.value)}
+        className="bg-gray-700 text-white border-none rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
+      >
+        <option>GUARD</option>
+        <option>MANAGER</option>
+        <option>FRONT</option>
+        <option>LESSONS</option>
+      </select>
+      <div className="flex items-center gap-1">
+        {applicablePresets.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => onPresetSelect(p, selectedRole)}
+            className={`text-xs px-2 py-1 rounded ${
+              activePreset?.id === p.id
+                ? "bg-blue-500 ring-2 ring-blue-300"
+                : "bg-gray-600 hover:bg-gray-500"
+            }`}
+          >
+            {`${formatTime12hr(p.start).replace(/:00$/, "")}-${formatTime12hr(
+              p.end
+            ).replace(/:00$/, "")}`}
+          </button>
+        ))}
+      </div>
+      {activePreset && (
+        <button
+          onClick={onClear}
+          className="bg-red-500 hover:bg-red-600 text-white rounded-full h-6 w-6 flex items-center justify-center"
+        >
+          <X size={16} />
+        </button>
+      )}
+    </div>
+  );
+};
+
 const ScheduleView = ({ company, workers, presets }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
@@ -577,6 +635,9 @@ const ScheduleView = ({ company, workers, presets }) => {
   const [popoverTarget, setPopoverTarget] = useState(null);
   const [revealedHoursWorkerId, setRevealedHoursWorkerId] = useState(null);
   const [selectedWorkers, setSelectedWorkers] = useState([]);
+  const [activePreset, setActivePreset] = useState(null);
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+  const tableRef = useRef(null);
 
   const [history, setHistory] = useState([{}]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -587,6 +648,25 @@ const ScheduleView = ({ company, workers, presets }) => {
 
   // Ref to track if the current update is from a local action (undo/redo/save)
   const isLocalUpdateRef = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setCursorPos({ x: e.clientX, y: e.clientY });
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setActivePreset(null);
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const weekStartDate = useMemo(
     () => getSaturdayOfWeek(currentDate),
@@ -812,16 +892,66 @@ const ScheduleView = ({ company, workers, presets }) => {
     }
   };
 
+  const handleSaveShift = async (
+    worker,
+    day,
+    newShiftData,
+    mode = "append"
+  ) => {
+    if (!scheduleDocId) return;
+
+    isLocalUpdateRef.current = true;
+    const newScheduleData = JSON.parse(JSON.stringify(scheduleData));
+    if (!newScheduleData[worker.uid]) newScheduleData[worker.uid] = {};
+
+    if (mode === "replace") {
+      // For popover edits, just replace the entire day's shifts
+      newScheduleData[worker.uid][day] = newShiftData;
+    } else {
+      // For easy-add toolbar, append the new shift
+      const currentShifts = newScheduleData[worker.uid][day] || [];
+      const filteredShifts = Array.isArray(currentShifts)
+        ? currentShifts.filter((s) => s.type !== "OFF")
+        : [];
+
+      const newShiftsToAdd = Array.isArray(newShiftData)
+        ? newShiftData
+        : [newShiftData];
+
+      newScheduleData[worker.uid][day] = [...filteredShifts, ...newShiftsToAdd];
+    }
+
+    pushNewState(newScheduleData);
+    const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+    await updateDoc(scheduleDocRef, { shifts: newScheduleData });
+    handleClosePopover();
+  };
+
   const handleCellClick = (event, worker, day) => {
     event.stopPropagation();
-    const currentShift = scheduleData[worker.uid]?.[day] || null;
-    setPopoverTarget({
-      worker,
-      day,
-      initialShift: currentShift,
-      rect: event.currentTarget.getBoundingClientRect(),
-    });
-    setHoveredCell({ row: worker.uid, col: day });
+    if (activePreset) {
+      let defaultType = "GUARD";
+      const title = worker.title.toLowerCase();
+      if (title.includes("manager") || title.includes("head guard"))
+        defaultType = "MANAGER";
+      else if (title.includes("front")) defaultType = "FRONT";
+
+      const newShift = {
+        start: activePreset.start,
+        end: activePreset.end,
+        type: activePreset.role || defaultType,
+      };
+      handleSaveShift(worker, day, [newShift], "append");
+    } else {
+      const currentShift = scheduleData[worker.uid]?.[day] || null;
+      setPopoverTarget({
+        worker,
+        day,
+        initialShift: currentShift,
+        rect: event.currentTarget.getBoundingClientRect(),
+      });
+      setHoveredCell({ row: worker.uid, col: day });
+    }
   };
 
   const handleClosePopover = () => {
@@ -829,19 +959,10 @@ const ScheduleView = ({ company, workers, presets }) => {
     setHoveredCell({ row: null, col: null });
   };
 
-  const handleSaveShift = async (newShiftData) => {
-    if (!popoverTarget || !scheduleDocId) return;
+  const handleSaveFromPopover = (newShiftData) => {
+    if (!popoverTarget) return;
     const { worker, day } = popoverTarget;
-
-    isLocalUpdateRef.current = true;
-    const newScheduleData = JSON.parse(JSON.stringify(scheduleData));
-    if (!newScheduleData[worker.uid]) newScheduleData[worker.uid] = {};
-    newScheduleData[worker.uid][day] = newShiftData;
-
-    pushNewState(newScheduleData);
-    const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-    await updateDoc(scheduleDocRef, { shifts: newScheduleData });
-    handleClosePopover();
+    handleSaveShift(worker, day, newShiftData, "replace");
   };
 
   const handleWeekChange = (weeks) => {
@@ -897,6 +1018,27 @@ const ScheduleView = ({ company, workers, presets }) => {
       const scheduleDocRef = doc(db, "schedules", scheduleDocId);
       await updateDoc(scheduleDocRef, { shifts: nextState });
     }
+  };
+
+  const handleRevealHoursStart = (workerId) => {
+    if (tableRef.current) {
+      const headerCells = tableRef.current.querySelectorAll("thead th");
+      headerCells.forEach((th) => {
+        const rect = th.getBoundingClientRect();
+        th.style.width = `${rect.width}px`;
+      });
+    }
+    setRevealedHoursWorkerId(workerId);
+  };
+
+  const handleRevealHoursEnd = () => {
+    if (tableRef.current) {
+      const headerCells = tableRef.current.querySelectorAll("thead th");
+      headerCells.forEach((th) => {
+        th.style.width = ""; // Remove the fixed width
+      });
+    }
+    setRevealedHoursWorkerId(null);
   };
 
   const renderWeekHeader = (forPrint = false) => {
@@ -1169,6 +1311,7 @@ const ScheduleView = ({ company, workers, presets }) => {
 
   return (
     <div className="pb-24">
+      <FloatingPresetChip preset={activePreset} position={cursorPos} />
       <WorkerDetailModal
         worker={selectedWorker}
         onClose={() => setSelectedWorker(null)}
@@ -1184,7 +1327,7 @@ const ScheduleView = ({ company, workers, presets }) => {
         <ShiftEditPopover
           targetCell={popoverTarget}
           presets={presets}
-          onSave={handleSaveShift}
+          onSave={handleSaveFromPopover}
           onClose={handleClosePopover}
         />
       )}
@@ -1250,6 +1393,7 @@ const ScheduleView = ({ company, workers, presets }) => {
 
       <div className="overflow-x-auto">
         <table
+          ref={tableRef}
           className="w-full border-collapse border"
           onMouseLeave={() => {
             if (!popoverTarget) setHoveredCell({ row: null, col: null });
@@ -1275,8 +1419,8 @@ const ScheduleView = ({ company, workers, presets }) => {
                   onCellEnter={setHoveredCell}
                   onCellClick={handleCellClick}
                   revealedHoursWorkerId={revealedHoursWorkerId}
-                  onRevealHoursStart={setRevealedHoursWorkerId}
-                  onRevealHoursEnd={() => setRevealedHoursWorkerId(null)}
+                  onRevealHoursStart={handleRevealHoursStart}
+                  onRevealHoursEnd={handleRevealHoursEnd}
                   isSelected={selectedWorkers.includes(worker.uid)}
                   onToggleSelect={handleToggleSelectWorker}
                 />
@@ -1322,8 +1466,8 @@ const ScheduleView = ({ company, workers, presets }) => {
                     onCellEnter={setHoveredCell}
                     onCellClick={handleCellClick}
                     revealedHoursWorkerId={revealedHoursWorkerId}
-                    onRevealHoursStart={setRevealedHoursWorkerId}
-                    onRevealHoursEnd={() => setRevealedHoursWorkerId(null)}
+                    onRevealHoursStart={handleRevealHoursStart}
+                    onRevealHoursEnd={handleRevealHoursEnd}
                     isSelected={selectedWorkers.includes(worker.uid)}
                     onToggleSelect={handleToggleSelectWorker}
                   />
@@ -1333,6 +1477,12 @@ const ScheduleView = ({ company, workers, presets }) => {
           )}
         </table>
       </div>
+      <EasyAddToolbar
+        presets={presets}
+        activePreset={activePreset}
+        onPresetSelect={(preset, role) => setActivePreset({ ...preset, role })}
+        onClear={() => setActivePreset(null)}
+      />
     </div>
   );
 };

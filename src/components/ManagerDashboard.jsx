@@ -86,7 +86,7 @@ const ManagerDashboard = ({ user, company }) => {
 
         {/* Right side with company code and Add Worker button */}
         <div className="text-right flex gap-2 flex-wrap justify-end">
-          <div className="p-2 rounded-lg flex items-center no-wrap gap-2 bg-white">
+          <div className="p-2 rounded-lg flex items-center no-wrap gap-2 bg-gray-100 inset-shadow-sm">
             <span className="text-sm text-nowrap font-semibold text-gray-600">
               Company Code:{" "}
             </span>

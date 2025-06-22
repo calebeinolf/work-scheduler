@@ -11,7 +11,15 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import EditWorkerModal from "./EditWorkerModal"; // Import the new modal
-import { Calendar, Redo, Redo2, Undo, Undo2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Printer,
+  Redo,
+  Redo2,
+  Undo,
+  Undo2,
+} from "lucide-react";
 
 // --- Time formatting and calculation helpers ---
 const formatTime12hr = (time24) => {
@@ -449,7 +457,7 @@ const WorkerRow = ({
   return (
     <tr
       key={worker.uid}
-      className={`${isSelected ? "bg-indigo-200" : "even:bg-gray-50"}`}
+      className={`${isSelected ? "bg-indigo-200" : "bg-white"}`}
     >
       <td className="p-1 border text-center">
         <input
@@ -516,21 +524,25 @@ const WorkerRow = ({
                 </div>
               ) : (
                 <div>
-                  {dayShifts.map((shift, index) => (
-                    <div
-                      key={index}
-                      className={`text-sm rounded-md p-0.5 flex items-center gap-1 justify-center text-nowrap ${getShiftHighlightClass(
-                        shift
-                      )}`}
-                    >
-                      <div>{`${formatTime12hr(shift.start)} - ${formatTime12hr(
-                        shift.end
-                      )}`}</div>
-                      {shouldShowShiftType(shift, worker) && (
-                        <div className="text-gray-500">({shift.type[0]})</div>
-                      )}
-                    </div>
-                  ))}
+                  {[...dayShifts]
+                    .sort((a, b) =>
+                      (a.start || "").localeCompare(b.start || "")
+                    )
+                    .map((shift, index) => (
+                      <div
+                        key={index}
+                        className={`text-sm rounded-md p-0.5 flex items-center gap-1 justify-center text-nowrap ${getShiftHighlightClass(
+                          shift
+                        )}`}
+                      >
+                        <div>{`${formatTime12hr(
+                          shift.start
+                        )} - ${formatTime12hr(shift.end)}`}</div>
+                        {shouldShowShiftType(shift, worker) && (
+                          <div className="text-gray-500">({shift.type[0]})</div>
+                        )}
+                      </div>
+                    ))}
                 </div>
               )
             ) : (
@@ -887,7 +899,7 @@ const ScheduleView = ({ company, workers, presets }) => {
     }
   };
 
-  const renderWeekHeader = () => {
+  const renderWeekHeader = (forPrint = false) => {
     const days = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
     const displayDays = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
     const headerDates = [];
@@ -898,6 +910,26 @@ const ScheduleView = ({ company, workers, presets }) => {
         `${displayDays[i]} ${dayDate.getMonth() + 1}/${dayDate.getDate()}`
       );
     }
+
+    if (forPrint) {
+      return `
+            <tr style="background-color: #f3f4f6;">
+                <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-size: 14px; font-weight: 600; color: #4b5563; min-width: 150px;">Worker</th>
+                <th style="padding: 8px; border: 1px solid #e5e7eb; font-size: 14px; font-weight: 600; color: #4b5563;">YOS</th>
+                ${days
+                  .map(
+                    (dayKey, i) => `
+                    <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; font-size: 14px; font-weight: 600; color: #4b5563;">
+                        <div>${headerDates[i]}</div>
+                    </th>
+                `
+                  )
+                  .join("")}
+                <th style="padding: 8px; border: 1px solid #e5e7eb; font-size: 14px; font-weight: 600; color: #4b5563;">Hours</th>
+            </tr>
+        `;
+    }
+
     return (
       <tr className="bg-gray-100">
         <th className="p-2 border text-center">
@@ -957,14 +989,168 @@ const ScheduleView = ({ company, workers, presets }) => {
     );
   };
 
+  const renderWorkerRowForPrint = (worker) => {
+    const weeklyShifts = scheduleData[worker.uid];
+    const weeklyTotal = weeklyShifts
+      ? Object.values(weeklyShifts).reduce(
+          (total, dayShifts) =>
+            total + calculateDailyHours(dayShifts, worker.isMinor),
+          0
+        )
+      : 0;
+
+    const shouldShowShiftType = (shift, worker) => {
+      if (!shift || !worker || !shift.type || !worker.title) return false;
+      if (shift.type === "LESSONS") return true;
+      if (worker.title.includes("Lifeguard") && shift.type === "GUARD")
+        return false;
+      if (worker.title.includes("Front") && shift.type === "FRONT")
+        return false;
+      return true;
+    };
+
+    return `
+            <tr>
+                <td style="padding: 4px; border: 1px solid #e5e7eb; font-weight: 500;">
+                    ${worker.fullName || worker.email}
+                    ${
+                      worker.isMinor
+                        ? '<span style="color: #6b7280; font-weight: 500; margin-left: 4px;">(M)</span>'
+                        : ""
+                    }
+                    ${
+                      worker.title &&
+                      worker.title !== "Lifeguard" &&
+                      worker.title !== "Front Worker"
+                        ? `<div style="font-size: 12px; color: #6b7280;">${worker.title}</div>`
+                        : ""
+                    }
+                </td>
+                <td style="padding: 4px; border: 1px solid #e5e7eb; text-align: center;">${
+                  worker.yos ?? 0
+                }</td>
+                ${["sat", "sun", "mon", "tue", "wed", "thu", "fri"]
+                  .map((day) => {
+                    const dayShifts = weeklyShifts?.[day];
+                    let cellContent = '<span style="color: #9ca3af;">-</span>';
+                    if (Array.isArray(dayShifts)) {
+                      if (dayShifts[0]?.type === "OFF") {
+                        cellContent = '<div style="color: #ef4444;">OFF</div>';
+                      } else {
+                        cellContent = dayShifts
+                          .map(
+                            (shift) => `
+                                <div style="font-size: 12px;">
+                                    ${formatTime12hr(
+                                      shift.start
+                                    )} - ${formatTime12hr(shift.end)}
+                                    ${
+                                      shouldShowShiftType(shift, worker)
+                                        ? `<span style="color: #6b7280;"> (${shift.type[0]})</span>`
+                                        : ""
+                                    }
+                                </div>
+                            `
+                          )
+                          .join("");
+                      }
+                    }
+                    return `<td style="padding: 4px; border: 1px solid #e5e7eb; text-align: center;">${cellContent}</td>`;
+                  })
+                  .join("")}
+                <td style="padding: 4px; border: 1px solid #e5e7eb; text-align: center; font-weight: 500;">${weeklyTotal.toFixed(
+                  2
+                )}</td>
+            </tr>
+        `;
+  };
+
+  const handlePrint = () => {
+    const weekEndDateForPrint = new Date(weekStartDate);
+    weekEndDateForPrint.setDate(weekStartDate.getDate() + 6);
+
+    const printWindow = window.open("", "_blank", "height=600,width=800");
+    let htmlContent = `
+      <html>
+        <head>
+          <title>Print Schedule</title>
+          <style>
+            @media print {
+                @page { size: landscape; }
+            }
+            body { font-family: sans-serif; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+            th { background-color: #f2f2f2; }
+            h1, h2 { text-align: center; }
+            .section-header { 
+              font-size: 12px; 
+              font-weight: bold; 
+              padding: 12px 8px; 
+              background-color: #f3f4f6; 
+              margin-top: 20px;
+              border-top: 2px solid #d1d5db;
+              border-bottom: 1px solid #e5e7eb;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Schedule for ${formatWeekRange(
+            weekStartDate,
+            weekEndDateForPrint
+          )}</h1>
+          <table>
+            <thead>
+              ${renderWeekHeader(true)}
+            </thead>
+            <tbody>
+              ${sortedManagersAndGuards
+                .map((worker) => renderWorkerRowForPrint(worker))
+                .join("")}
+            </tbody>
+            ${
+              sortedFrontWorkers.length > 0
+                ? `
+              <tbody>
+                <tr><td colspan="10" class="section-header">Front Workers</td></tr>
+              </tbody>
+              <tbody>
+                ${sortedFrontWorkers
+                  .map((worker) => renderWorkerRowForPrint(worker))
+                  .join("")}
+              </tbody>
+            `
+                : ""
+            }
+          </table>
+        </body>
+      </html>
+    `;
+    printWindow.document.open();
+    printWindow.document.close();
+    printWindow.document.body.innerHTML = htmlContent;
+    printWindow.focus();
+    // Use a timeout to ensure content is loaded before printing
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
+
   const weekEndDate = new Date(weekStartDate);
   weekEndDate.setDate(weekStartDate.getDate() + 6);
 
   const formatWeekRange = (start, end) => {
-    const month = start.toLocaleString("default", { month: "long" });
+    const startMonth = start.toLocaleString("default", { month: "long" });
+    const endMonth = end.toLocaleString("default", { month: "long" });
     const startDay = start.getDate();
     const endDay = end.getDate();
-    return `${month} ${startDay}-${endDay}`;
+
+    if (startMonth === endMonth) {
+      return `${startMonth} ${startDay}-${endDay}`;
+    } else {
+      return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+    }
   };
 
   // Helper to check if the current week is the actual current week
@@ -982,7 +1168,7 @@ const ScheduleView = ({ company, workers, presets }) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
+    <div className="pb-24">
       <WorkerDetailModal
         worker={selectedWorker}
         onClose={() => setSelectedWorker(null)}
@@ -1007,16 +1193,16 @@ const ScheduleView = ({ company, workers, presets }) => {
         <div className="flex items-center gap-4">
           <button
             onClick={() => handleWeekChange(-1)}
-            className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+            className="h-9 w-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
           >
-            &larr; Previous
+            <ArrowLeft width={16} />
           </button>
 
           <button
             className={`flex items-center gap-2 text-blue-500 ${
               (isCurrentWeek ||
                 weekStartDate < getSaturdayOfWeek(new Date())) &&
-              "opacity-0"
+              "opacity-0 !cursor-default"
             }`}
             onClick={handleGoToCurrentWeek}
           >
@@ -1034,7 +1220,7 @@ const ScheduleView = ({ company, workers, presets }) => {
             className={`flex items-center gap-2 text-blue-500 ${
               (isCurrentWeek ||
                 weekStartDate > getSaturdayOfWeek(new Date())) &&
-              "opacity-0"
+              "opacity-0 !cursor-default"
             }`}
             onClick={handleGoToCurrentWeek}
           >
@@ -1044,9 +1230,9 @@ const ScheduleView = ({ company, workers, presets }) => {
 
           <button
             onClick={() => handleWeekChange(1)}
-            className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+            className="h-9 w-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
           >
-            Next &rarr;
+            <ArrowRight width={16} />
           </button>
         </div>
       </div>
@@ -1059,6 +1245,7 @@ const ScheduleView = ({ company, workers, presets }) => {
         handleRedo={handleRedo}
         canUndo={historyIndex > 0}
         canRedo={historyIndex < history.length - 1}
+        onPrint={handlePrint}
       />
 
       <div className="overflow-x-auto">
@@ -1159,6 +1346,7 @@ const BulkActionsBar = ({
   handleRedo,
   canUndo,
   canRedo,
+  onPrint,
 }) => {
   const [showMenu, setShowMenu] = React.useState(false);
   const menuRef = React.useRef(null);
@@ -1178,90 +1366,102 @@ const BulkActionsBar = ({
 
   return (
     <div
-      className={`rounded-lg p-2 mb-4 flex items-center justify-between ${
-        selectedWorkers.length === 0 ? " bg-gray-200" : " bg-gray-800"
-      }`}
+      className={`rounded-tl-lg border-t border-x rounded-tr-lg p-2 flex items-center justify-between courde bg-gray-500`}
     >
-      <span
-        className={`font-medium ml-1 ${
-          selectedWorkers.length === 0 ? "" : "text-white"
-        }`}
-      >
+      <span className={`ml-1 text-white`}>
         {selectedWorkers.length} worker(s) selected
       </span>
-      <div className="flex items-center gap-2 relative">
-        <button
-          onClick={handleUndo}
-          disabled={!canUndo}
-          className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-gray-50 disabled:opacity-50"
-        >
-          <Undo2 width={15} />
-          <span className="text-sm">Undo</span>
-        </button>
-        <button
-          onClick={handleRedo}
-          disabled={!canRedo}
-          className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-gray-50 disabled:opacity-50"
-        >
-          <span className="text-sm">Redo</span>
-          <Redo2 width={15} />
-        </button>
-        <button
-          onClick={() => handleBulkUpdate([{ type: "OFF" }])}
-          className={`px-3 h-7 text-sm rounded-md ${
-            selectedWorkers.length === 0
-              ? "opacity-50 !cursor-default"
-              : "text-red-500 bg-red-100 hover:bg-red-200 !cursor-pointer"
-          }`}
-          disabled={selectedWorkers.length === 0}
-        >
-          Set as OFF
-        </button>
-        <button
-          onClick={() => handleBulkUpdate(null)}
-          className={`px-3 h-7 text-sm rounded-md !cursor-default ${
-            selectedWorkers.length === 0
-              ? "opacity-50 !cursor-default"
-              : "bg-gray-100 hover:bg-gray-200 !cursor-pointer"
-          }`}
-          disabled={selectedWorkers.length === 0}
-        >
-          Reset Shifts
-        </button>
-        {/* Ellipsis button for popup menu */}
-        <div className="relative" ref={menuRef}>
+
+      {selectedWorkers.length === 0 ? (
+        <div className="flex items-center gap-2 relative">
           <button
-            onClick={() => setShowMenu((v) => !v)}
-            className={`w-7 h-7 flex items-center justify-center rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 `}
-            aria-label="More actions"
-            type="button"
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50"
           >
-            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
-              <circle cx="4" cy="10" r="1.7" />
-              <circle cx="10" cy="10" r="1.7" />
-              <circle cx="16" cy="10" r="1.7" />
-            </svg>
+            <Undo2 width={15} />
+            <span className="text-sm">Undo</span>
           </button>
-          {showMenu && (
-            <div className="absolute -right-4 mt-2 w-min bg-white border rounded shadow-lg z-50">
-              <button
-                onClick={() => {
-                  setShowMenu(false);
-                  handleBulkRemove();
-                }}
-                className={`block w-full text-nowrap text-sm text-left p-2 text-red-600 hover:bg-red-50 ${
-                  selectedWorkers.length === 0
-                    ? "opacity-50 !cursor-default"
-                    : "bg-gray-100 hover:bg-gray-200 !cursor-pointer"
-                }`}
-                disabled={selectedWorkers.length === 0}
-              >
-                Remove workers
-              </button>
-            </div>
-          )}
+          <button
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50"
+          >
+            <span className="text-sm">Redo</span>
+            <Redo2 width={15} />
+          </button>
+          <button
+            onClick={onPrint}
+            className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50"
+          >
+            <Printer width={15} />
+            <span className="text-sm">Print</span>
+          </button>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center gap-2 relative">
+          <button
+            onClick={() => handleBulkUpdate([{ type: "OFF" }])}
+            className={`px-3 h-7 text-sm rounded-md bg-white ${
+              selectedWorkers.length === 0
+                ? "opacity-50 !cursor-default"
+                : "text-red-500  hover:bg-red-100 !cursor-pointer"
+            }`}
+            disabled={selectedWorkers.length === 0}
+          >
+            Set as OFF
+          </button>
+          <button
+            onClick={() => handleBulkUpdate(null)}
+            className={`px-3 h-7 text-sm rounded-md bg-white ${
+              selectedWorkers.length === 0
+                ? "opacity-50 !cursor-default"
+                : "bg-white hover:bg-gray-100 !cursor-pointer"
+            }`}
+            disabled={selectedWorkers.length === 0}
+          >
+            Reset Shifts
+          </button>
+          {/* Ellipsis button for popup menu */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowMenu((v) => !v)}
+              className={`w-7 h-7 flex items-center justify-center rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 `}
+              aria-label="More actions"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <circle cx="4" cy="10" r="1.7" />
+                <circle cx="10" cy="10" r="1.7" />
+                <circle cx="16" cy="10" r="1.7" />
+              </svg>
+            </button>
+            {showMenu && (
+              <div className="absolute -right-4 mt-2 w-min bg-white border rounded shadow-lg z-50">
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    handleBulkRemove();
+                  }}
+                  className={`block w-full text-nowrap text-sm text-left p-2 text-red-600 hover:bg-red-50 ${
+                    selectedWorkers.length === 0
+                      ? "opacity-50 !cursor-default"
+                      : "bg-gray-100 hover:bg-gray-200 !cursor-pointer"
+                  }`}
+                  disabled={selectedWorkers.length === 0}
+                >
+                  Remove workers
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

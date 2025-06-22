@@ -130,7 +130,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen">
       <header className="bg-white shadow-sm">
         <nav className="container mx-auto px-6 py-3 flex justify-between items-center">
           <h1 className="text-xl font-bold text-blue-600">

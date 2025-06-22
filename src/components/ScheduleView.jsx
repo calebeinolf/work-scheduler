@@ -28,7 +28,7 @@ const formatTime12hr = (time24) => {
   const [hours, minutes] = time24.split(":");
   const h = parseInt(hours, 10);
   const newHours = h % 12 === 0 ? 12 : h % 12;
-  return `${newHours}:${minutes.padStart(2, "0")}`;
+  return `${newHours}:${minutes}`;
 };
 
 const calculateDailyHours = (dayShifts, isMinor) => {
@@ -305,12 +305,12 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   );
 };
 
-// Helper to get the start of a week (Saturday) for any given date
+// Helper to get the start of a week (Sunday) for any given date
 // Do not delete this method, it is neccessary
-const getSaturdayOfWeek = (d) => {
+const getSundayOfWeek = (d) => {
   const date = new Date(d);
   const day = date.getDay(); // Sunday - Saturday : 0 - 6
-  const diff = date.getDate() - day - 1; // Adjust to Saturday
+  const diff = date.getDate() - day;
   return new Date(date.setDate(diff));
 };
 
@@ -489,7 +489,7 @@ const WorkerRow = ({
       >
         {worker.yos ?? 0}
       </td>
-      {["sat", "sun", "mon", "tue", "wed", "thu", "fri"].map((day) => {
+      {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day) => {
         const dayShifts = weeklyShifts?.[day];
         const isRevealed = revealedHoursWorkerId === worker.uid;
         let dailyTotalHours = 0;
@@ -669,7 +669,7 @@ const ScheduleView = ({ company, workers, presets }) => {
   }, []);
 
   const weekStartDate = useMemo(
-    () => getSaturdayOfWeek(currentDate),
+    () => getSundayOfWeek(currentDate),
     [currentDate]
   );
 
@@ -704,7 +704,7 @@ const ScheduleView = ({ company, workers, presets }) => {
 
   const dailyStaffCounts = useMemo(() => {
     const counts = {};
-    const dayKeys = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
+    const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
     const calculateCountsForType = (shiftType) => {
       dayKeys.forEach((day) => {
@@ -862,7 +862,7 @@ const ScheduleView = ({ company, workers, presets }) => {
 
     isLocalUpdateRef.current = true;
     const newScheduleData = JSON.parse(JSON.stringify(scheduleData));
-    const days = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
+    const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
     selectedWorkers.forEach((workerId) => {
       days.forEach((day) => {
         if (!newScheduleData[workerId]) newScheduleData[workerId] = {};
@@ -1042,8 +1042,8 @@ const ScheduleView = ({ company, workers, presets }) => {
   };
 
   const renderWeekHeader = (forPrint = false) => {
-    const days = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
-    const displayDays = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+    const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const displayDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const headerDates = [];
     for (let i = 0; i < 7; i++) {
       const dayDate = new Date(weekStartDate);
@@ -1171,7 +1171,7 @@ const ScheduleView = ({ company, workers, presets }) => {
                 <td style="padding: 4px; border: 1px solid #e5e7eb; text-align: center;">${
                   worker.yos ?? 0
                 }</td>
-                ${["sat", "sun", "mon", "tue", "wed", "thu", "fri"]
+                ${["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
                   .map((day) => {
                     const dayShifts = weeklyShifts?.[day];
                     let cellContent = '<span style="color: #9ca3af;">-</span>';
@@ -1297,7 +1297,7 @@ const ScheduleView = ({ company, workers, presets }) => {
 
   // Helper to check if the current week is the actual current week
   const isCurrentWeek = useMemo(() => {
-    const today = getSaturdayOfWeek(new Date());
+    const today = getSundayOfWeek(new Date());
     return (
       weekStartDate.getFullYear() === today.getFullYear() &&
       weekStartDate.getMonth() === today.getMonth() &&
@@ -1343,8 +1343,7 @@ const ScheduleView = ({ company, workers, presets }) => {
 
           <button
             className={`flex items-center gap-2 text-blue-500 ${
-              (isCurrentWeek ||
-                weekStartDate < getSaturdayOfWeek(new Date())) &&
+              (isCurrentWeek || weekStartDate < getSundayOfWeek(new Date())) &&
               "opacity-0 !cursor-default"
             }`}
             onClick={handleGoToCurrentWeek}
@@ -1361,8 +1360,7 @@ const ScheduleView = ({ company, workers, presets }) => {
         <div className="flex items-center gap-4">
           <button
             className={`flex items-center gap-2 text-blue-500 ${
-              (isCurrentWeek ||
-                weekStartDate > getSaturdayOfWeek(new Date())) &&
+              (isCurrentWeek || weekStartDate > getSundayOfWeek(new Date())) &&
               "opacity-0 !cursor-default"
             }`}
             onClick={handleGoToCurrentWeek}

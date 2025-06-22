@@ -20,6 +20,9 @@ import {
   Undo,
   Undo2,
   X,
+  Send, // Publish Icon
+  EyeOff, // Unpublish Icon
+  CloudUpload, // Publish Changes Icon
 } from "lucide-react";
 
 // --- Time formatting and calculation helpers ---
@@ -305,7 +308,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   );
 };
 
-// Helper to get the start of a week (Sunday) for any given date
+// --- Helper to get the start of a week (Sunday) for any given date ---
 // Do not delete this method, it is neccessary
 const getSundayOfWeek = (d) => {
   const date = new Date(d);
@@ -315,7 +318,13 @@ const getSundayOfWeek = (d) => {
 };
 
 // --- Worker Details Modal Component ---
-const WorkerDetailModal = ({ worker, onClose, onEdit, onDelete }) => {
+const WorkerDetailModal = ({
+  worker,
+  onClose,
+  onEdit,
+  onDelete,
+  isManager,
+}) => {
   if (!worker) return null;
   return (
     <div
@@ -355,19 +364,27 @@ const WorkerDetailModal = ({ worker, onClose, onEdit, onDelete }) => {
           </div>
         </div>
         <div className="bg-gray-50 p-3 flex justify-between rounded-b-lg">
-          <button
-            onClick={() => onDelete(worker.uid)}
-            className="px-4 py-2 bg-red-100 text-red-500 rounded-md hover:bg-red-200"
-          >
-            Remove
-          </button>
+          {
+            isManager ? (
+              <button
+                onClick={() => onDelete(worker.uid)}
+                className="px-4 py-2 bg-red-100 text-red-500 rounded-md hover:bg-red-200"
+              >
+                Remove
+              </button>
+            ) : (
+              <div />
+            ) /* Placeholder to maintain layout */
+          }
           <div className="flex space-x-2">
-            <button
-              onClick={() => onEdit(worker)}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-            >
-              Edit
-            </button>
+            {isManager && (
+              <button
+                onClick={() => onEdit(worker)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                Edit
+              </button>
+            )}
             <button
               onClick={onClose}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
@@ -395,9 +412,10 @@ const WorkerRow = ({
   onRevealHoursEnd,
   isSelected,
   onToggleSelect,
+  isManager,
 }) => {
   const getCellClass = (colKey) => {
-    if (isSelected) return ""; // Selection highlight takes priority, disable hover highlight
+    if (isSelected && isManager) return ""; // Selection highlight takes priority, disable hover highlight
     if (
       popoverTarget &&
       popoverTarget.worker.uid === worker.uid &&
@@ -454,20 +472,22 @@ const WorkerRow = ({
   return (
     <tr
       key={worker.uid}
-      className={`${isSelected ? "bg-indigo-200" : "bg-white"}`}
+      className={`${isSelected && isManager ? "bg-indigo-200" : "bg-white"}`}
     >
-      <td className="p-1 border text-center">
-        <input
-          type="checkbox"
-          className="rounded"
-          checked={isSelected}
-          onChange={() => onToggleSelect(worker.uid)}
-        />
-      </td>
+      {isManager && (
+        <td className="p-1 border text-center">
+          <input
+            type="checkbox"
+            className="rounded"
+            checked={isSelected}
+            onChange={() => onToggleSelect(worker.uid)}
+          />
+        </td>
+      )}
       <td
-        className={`p-1 border font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto cursor-pointer transition-colors duration-150 ${getCellClass(
-          "name"
-        )}`}
+        className={`p-1 border font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto transition-colors duration-150 ${
+          isManager ? "cursor-pointer" : ""
+        } ${getCellClass("name")}`}
         onClick={() => onWorkerClick(worker)}
         onMouseEnter={() => handleMouseEnter(worker.uid, "name")}
       >
@@ -500,9 +520,9 @@ const WorkerRow = ({
         return (
           <td
             key={day}
-            className={`p-1 border text-center cursor-pointer transition-colors duration-150 ${getCellClass(
-              day
-            )}`}
+            className={`p-1 border text-center transition-colors duration-150 ${
+              isManager ? "cursor-pointer" : ""
+            } ${getCellClass(day)}`}
             onMouseEnter={() => handleMouseEnter(worker.uid, day)}
             onClick={(e) => onCellClick(e, worker, day)}
           >
@@ -551,7 +571,7 @@ const WorkerRow = ({
       <td
         className={`p-1 border ${
           weeklyTotal > 40 && "text-red-500 bg-red-50 border-black"
-        } text-center font-medium cursor-pointer transition-colors duration-150 ${getCellClass(
+        } text-center font-medium transition-colors duration-150 cursor-pointer ${getCellClass(
           "total"
         )}`}
         onMouseEnter={() => handleMouseEnter(worker.uid, "total")}
@@ -626,7 +646,7 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
   );
 };
 
-const ScheduleView = ({ company, workers, presets }) => {
+const ScheduleView = ({ company, workers, presets, isManager = true }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [selectedWorker, setSelectedWorker] = useState(null);
@@ -639,6 +659,7 @@ const ScheduleView = ({ company, workers, presets }) => {
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const tableRef = useRef(null);
 
+  const [scheduleDocData, setScheduleDocData] = useState(null);
   const [history, setHistory] = useState([{}]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const scheduleData = useMemo(
@@ -646,10 +667,10 @@ const ScheduleView = ({ company, workers, presets }) => {
     [history, historyIndex]
   );
 
-  // Ref to track if the current update is from a local action (undo/redo/save)
   const isLocalUpdateRef = useRef(false);
 
   useEffect(() => {
+    if (!isManager) return;
     const handleMouseMove = (e) => {
       setCursorPos({ x: e.clientX, y: e.clientY });
     };
@@ -666,7 +687,7 @@ const ScheduleView = ({ company, workers, presets }) => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [isManager]);
 
   const weekStartDate = useMemo(
     () => getSundayOfWeek(currentDate),
@@ -756,42 +777,45 @@ const ScheduleView = ({ company, workers, presets }) => {
     }
 
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-
     const unsubscribe = onSnapshot(scheduleDocRef, (docSnap) => {
-      // If the update came from a local action, don't reset history
-      if (isLocalUpdateRef.current) {
-        isLocalUpdateRef.current = false; // Reset the flag
+      if (isLocalUpdateRef.current && isManager) {
+        isLocalUpdateRef.current = false;
         return;
       }
+      const docData = docSnap.data() || {};
+      setScheduleDocData(docData);
 
-      let currentShifts = {};
-      if (docSnap.exists()) {
-        currentShifts = docSnap.data().shifts || {};
-      }
+      const shiftsForView = isManager
+        ? docData.shifts || {}
+        : docData.isPublished
+        ? docData.publishedShifts || {}
+        : {};
 
-      // Deep compare to see if data from server is actually different
       if (
-        JSON.stringify(currentShifts) === JSON.stringify(history[historyIndex])
+        JSON.stringify(shiftsForView) === JSON.stringify(history[historyIndex])
       ) {
+        setLoading(false);
         return;
       }
 
-      const updatedShifts = { ...currentShifts };
+      const updatedShifts = { ...shiftsForView };
       let needsUpdate = false;
-      workers.forEach((worker) => {
-        if (worker.uid && !updatedShifts[worker.uid]) {
-          updatedShifts[worker.uid] = {
-            sat: null,
-            sun: null,
-            mon: null,
-            tue: null,
-            wed: null,
-            thu: null,
-            fri: null,
-          };
-          needsUpdate = true;
-        }
-      });
+      if (isManager) {
+        workers.forEach((worker) => {
+          if (worker.uid && !updatedShifts[worker.uid]) {
+            updatedShifts[worker.uid] = {
+              sat: null,
+              sun: null,
+              mon: null,
+              tue: null,
+              wed: null,
+              thu: null,
+              fri: null,
+            };
+            needsUpdate = true;
+          }
+        });
+      }
 
       if (needsUpdate) {
         setDoc(
@@ -799,20 +823,26 @@ const ScheduleView = ({ company, workers, presets }) => {
           {
             companyId: company.id,
             weekOf: weekStartDate,
-            isPublished: false,
+            isPublished: docData.isPublished || false,
             shifts: updatedShifts,
           },
           { merge: true }
         );
       }
-
       setHistory([updatedShifts]);
       setHistoryIndex(0);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [scheduleDocId, workers, company, weekStartDate]);
+  }, [scheduleDocId, workers, company, weekStartDate, isManager]);
+
+  const isPublished = scheduleDocData?.isPublished || false;
+  const hasUnpublishedChanges =
+    isManager &&
+    isPublished &&
+    JSON.stringify(scheduleDocData?.shifts) !==
+      JSON.stringify(scheduleDocData?.publishedShifts);
 
   const pushNewState = (newShifts) => {
     const newHistory = history.slice(0, historyIndex + 1);
@@ -828,37 +858,19 @@ const ScheduleView = ({ company, workers, presets }) => {
     );
   };
 
-  const handleToggleSelectAll = (e) => {
+  const handleToggleSelectAll = (e, workerList) => {
+    const workerIds = workerList.map((w) => w.uid);
     if (e.target.checked) {
-      setSelectedWorkers(workers.map((w) => w.uid));
+      setSelectedWorkers((prev) => [...new Set([...prev, ...workerIds])]);
     } else {
-      setSelectedWorkers([]);
-    }
-  };
-
-  const handleToggleFrontSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedWorkers([
-        ...selectedWorkers,
-        ...workers
-          .filter(
-            (w) =>
-              w.title === "Front Worker" && !selectedWorkers.includes(w.uid)
-          )
-          .map((w) => w.uid),
-      ]);
-    } else {
-      setSelectedWorkers(
-        selectedWorkers.filter(
-          (uid) =>
-            !workers.some((w) => w.title === "Front Worker" && w.uid === uid)
-        )
+      setSelectedWorkers((prev) =>
+        prev.filter((id) => !workerIds.includes(id))
       );
     }
   };
 
   const handleBulkUpdate = async (updateValue) => {
-    if (selectedWorkers.length === 0 || !scheduleDocId) return;
+    if (selectedWorkers.length === 0 || !scheduleDocId || !isManager) return;
 
     isLocalUpdateRef.current = true;
     const newScheduleData = JSON.parse(JSON.stringify(scheduleData));
@@ -877,7 +889,7 @@ const ScheduleView = ({ company, workers, presets }) => {
   };
 
   const handleBulkRemove = async () => {
-    if (selectedWorkers.length === 0) return;
+    if (selectedWorkers.length === 0 || !isManager) return;
     if (
       window.confirm(
         `Are you sure you want to remove ${selectedWorkers.length} worker(s)? This is permanent.`
@@ -898,26 +910,21 @@ const ScheduleView = ({ company, workers, presets }) => {
     newShiftData,
     mode = "append"
   ) => {
-    if (!scheduleDocId) return;
-
+    if (!scheduleDocId || !isManager) return;
     isLocalUpdateRef.current = true;
     const newScheduleData = JSON.parse(JSON.stringify(scheduleData));
     if (!newScheduleData[worker.uid]) newScheduleData[worker.uid] = {};
 
     if (mode === "replace") {
-      // For popover edits, just replace the entire day's shifts
       newScheduleData[worker.uid][day] = newShiftData;
     } else {
-      // For easy-add toolbar, append the new shift
       const currentShifts = newScheduleData[worker.uid][day] || [];
       const filteredShifts = Array.isArray(currentShifts)
         ? currentShifts.filter((s) => s.type !== "OFF")
         : [];
-
       const newShiftsToAdd = Array.isArray(newShiftData)
         ? newShiftData
         : [newShiftData];
-
       newScheduleData[worker.uid][day] = [...filteredShifts, ...newShiftsToAdd];
     }
 
@@ -928,6 +935,7 @@ const ScheduleView = ({ company, workers, presets }) => {
   };
 
   const handleCellClick = (event, worker, day) => {
+    if (!isManager) return;
     event.stopPropagation();
     if (activePreset) {
       let defaultType = "GUARD";
@@ -974,11 +982,13 @@ const ScheduleView = ({ company, workers, presets }) => {
   };
 
   const handleOpenEditModal = (worker) => {
+    if (!isManager) return;
     setEditingWorker(worker);
     setSelectedWorker(null);
   };
 
   const handleDeleteWorker = async (workerId) => {
+    if (!isManager) return;
     if (
       window.confirm(
         "Are you sure you want to remove this worker? This action cannot be undone."
@@ -999,25 +1009,50 @@ const ScheduleView = ({ company, workers, presets }) => {
   };
 
   const handleUndo = async () => {
-    if (historyIndex > 0) {
-      isLocalUpdateRef.current = true;
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      const prevState = history[newIndex];
-      const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-      await updateDoc(scheduleDocRef, { shifts: prevState });
-    }
+    if (!isManager || historyIndex <= 0) return;
+    isLocalUpdateRef.current = true;
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    const prevState = history[newIndex];
+    const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+    await updateDoc(scheduleDocRef, { shifts: prevState });
   };
 
   const handleRedo = async () => {
-    if (historyIndex < history.length - 1) {
-      isLocalUpdateRef.current = true;
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      const nextState = history[newIndex];
-      const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-      await updateDoc(scheduleDocRef, { shifts: nextState });
-    }
+    if (!isManager || historyIndex >= history.length - 1) return;
+    isLocalUpdateRef.current = true;
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    const nextState = history[newIndex];
+    const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+    await updateDoc(scheduleDocRef, { shifts: nextState });
+  };
+
+  const handlePublish = async () => {
+    if (!isManager || !scheduleDocId) return;
+    const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+    await updateDoc(scheduleDocRef, {
+      isPublished: true,
+      publishedShifts: scheduleData,
+    });
+  };
+
+  const handleUnpublish = async () => {
+    if (!isManager || !scheduleDocId) return;
+    if (
+      !window.confirm(
+        "Are you sure? Unpublishing will hide the schedule from all workers."
+      )
+    )
+      return;
+    const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+    await updateDoc(scheduleDocRef, { isPublished: false });
+  };
+
+  const handlePublishChanges = async () => {
+    if (!isManager || !scheduleDocId) return;
+    const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+    await updateDoc(scheduleDocRef, { publishedShifts: scheduleData });
   };
 
   const handleRevealHoursStart = (workerId) => {
@@ -1035,7 +1070,7 @@ const ScheduleView = ({ company, workers, presets }) => {
     if (tableRef.current) {
       const headerCells = tableRef.current.querySelectorAll("thead th");
       headerCells.forEach((th) => {
-        th.style.width = ""; // Remove the fixed width
+        th.style.width = "";
       });
     }
     setRevealedHoursWorkerId(null);
@@ -1052,6 +1087,8 @@ const ScheduleView = ({ company, workers, presets }) => {
         `${displayDays[i]} ${dayDate.getMonth() + 1}/${dayDate.getDate()}`
       );
     }
+    // ... (rest of the renderWeekHeader method is unchanged)
+    const headerColSpan = isManager ? "10" : "9";
 
     if (forPrint) {
       return `
@@ -1074,16 +1111,23 @@ const ScheduleView = ({ company, workers, presets }) => {
 
     return (
       <tr className="bg-gray-100">
-        <th className="p-2 border text-center">
-          <input
-            type="checkbox"
-            className="rounded"
-            onChange={handleToggleSelectAll}
-            checked={
-              workers.length > 0 && selectedWorkers.length === workers.length
-            }
-          />
-        </th>
+        {isManager && (
+          <th className="p-2 border text-center">
+            <input
+              type="checkbox"
+              className="rounded"
+              onChange={(e) =>
+                handleToggleSelectAll(e, [
+                  ...sortedManagersAndGuards,
+                  ...sortedFrontWorkers,
+                ])
+              }
+              checked={
+                workers.length > 0 && selectedWorkers.length === workers.length
+              }
+            />
+          </th>
+        )}
         <th
           className={`p-2 border text-left text-sm font-semibold text-gray-600 min-w-[150px] max-w-[250px] bg-gray-100`}
           onMouseEnter={() => handleHeaderMouseEnter("name")}
@@ -1295,7 +1339,6 @@ const ScheduleView = ({ company, workers, presets }) => {
     }
   };
 
-  // Helper to check if the current week is the actual current week
   const isCurrentWeek = useMemo(() => {
     const today = getSundayOfWeek(new Date());
     return (
@@ -1309,21 +1352,28 @@ const ScheduleView = ({ company, workers, presets }) => {
     setCurrentDate(new Date());
   };
 
+  const headerColSpan = isManager ? "11" : "10";
+
   return (
     <div className="pb-24">
-      <FloatingPresetChip preset={activePreset} position={cursorPos} />
+      {isManager && (
+        <FloatingPresetChip preset={activePreset} position={cursorPos} />
+      )}
       <WorkerDetailModal
         worker={selectedWorker}
         onClose={() => setSelectedWorker(null)}
         onEdit={handleOpenEditModal}
         onDelete={handleDeleteWorker}
+        isManager={isManager}
       />
-      <EditWorkerModal
-        worker={editingWorker}
-        isOpen={!!editingWorker}
-        onClose={() => setEditingWorker(null)}
-      />
-      {popoverTarget && (
+      {isManager && (
+        <EditWorkerModal
+          worker={editingWorker}
+          isOpen={!!editingWorker}
+          onClose={() => setEditingWorker(null)}
+        />
+      )}
+      {popoverTarget && isManager && (
         <ShiftEditPopover
           targetCell={popoverTarget}
           presets={presets}
@@ -1332,7 +1382,7 @@ const ScheduleView = ({ company, workers, presets }) => {
         />
       )}
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 px-1">
         <div className="flex items-center gap-4">
           <button
             onClick={() => handleWeekChange(-1)}
@@ -1349,7 +1399,7 @@ const ScheduleView = ({ company, workers, presets }) => {
             onClick={handleGoToCurrentWeek}
           >
             <Undo width={15} />
-            <span className="text-sm">Back to this week</span>
+            <span className="text-sm font-medium">Back to this week</span>
           </button>
         </div>
 
@@ -1365,7 +1415,7 @@ const ScheduleView = ({ company, workers, presets }) => {
             }`}
             onClick={handleGoToCurrentWeek}
           >
-            <span className="text-sm">Back to this week</span>
+            <span className="text-sm font-medium">Back to this week</span>
             <Redo width={15} />
           </button>
 
@@ -1378,109 +1428,134 @@ const ScheduleView = ({ company, workers, presets }) => {
         </div>
       </div>
 
-      <BulkActionsBar
-        selectedWorkers={selectedWorkers}
-        handleBulkUpdate={handleBulkUpdate}
-        handleBulkRemove={handleBulkRemove}
-        handleUndo={handleUndo}
-        handleRedo={handleRedo}
-        canUndo={historyIndex > 0}
-        canRedo={historyIndex < history.length - 1}
-        onPrint={handlePrint}
-      />
+      {isManager && (
+        <BulkActionsBar
+          selectedWorkers={selectedWorkers}
+          handleBulkUpdate={handleBulkUpdate}
+          handleBulkRemove={handleBulkRemove}
+          handleUndo={handleUndo}
+          handleRedo={handleRedo}
+          canUndo={historyIndex > 0}
+          canRedo={historyIndex < history.length - 1}
+          onPrint={handlePrint}
+          isPublished={isPublished}
+          hasUnpublishedChanges={hasUnpublishedChanges}
+          onPublish={handlePublish}
+          onUnpublish={handleUnpublish}
+          onPublishChanges={handlePublishChanges}
+        />
+      )}
 
-      <div className="overflow-x-auto">
-        <table
-          ref={tableRef}
-          className="w-full border-collapse border"
-          onMouseLeave={() => {
-            if (!popoverTarget) setHoveredCell({ row: null, col: null });
-          }}
-        >
-          <thead>{renderWeekHeader()}</thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="11" className="text-center p-4">
-                  Loading schedule...
-                </td>
-              </tr>
-            ) : (
-              sortedManagersAndGuards.map((worker) => (
-                <WorkerRow
-                  key={worker.uid}
-                  worker={worker}
-                  scheduleData={scheduleData}
-                  onWorkerClick={setSelectedWorker}
-                  hoveredCell={hoveredCell}
-                  popoverTarget={popoverTarget}
-                  onCellEnter={setHoveredCell}
-                  onCellClick={handleCellClick}
-                  revealedHoursWorkerId={revealedHoursWorkerId}
-                  onRevealHoursStart={handleRevealHoursStart}
-                  onRevealHoursEnd={handleRevealHoursEnd}
-                  isSelected={selectedWorkers.includes(worker.uid)}
-                  onToggleSelect={handleToggleSelectWorker}
-                />
-              ))
-            )}
-          </tbody>
-          {sortedFrontWorkers.length > 0 && (
-            <>
-              {/* Gap row between sections, I added it on purpose, please DO NOT REMOVE! */}
-              <tbody>
-                <tr className="bg-gray-100 text-center">
-                  <td className="p-2 pt-5">
-                    <input
-                      type="checkbox"
-                      className="rounded"
-                      onChange={handleToggleFrontSelectAll}
-                      checked={
-                        sortedFrontWorkers.length > 0 &&
-                        sortedFrontWorkers.every((fw) =>
-                          selectedWorkers.includes(fw.uid)
-                        )
-                      }
-                    />
-                  </td>
-                  <td
-                    colSpan="10"
-                    className={`p-2 pt-5 border text-left text-sm font-semibold text-gray-600`}
-                    onMouseEnter={() => handleHeaderMouseEnter("name")}
-                  >
-                    Front Workers
+      {!isManager && !loading && !isPublished && (
+        <div className="text-center p-8 bg-gray-50 rounded-lg">
+          <p className="text-gray-600">
+            The schedule for this week has not been published yet.
+          </p>
+        </div>
+      )}
+
+      {((isManager && !loading) || (!isManager && isPublished)) && (
+        <div className="overflow-x-auto">
+          <table
+            ref={tableRef}
+            className="w-full border-collapse border"
+            onMouseLeave={() => {
+              if (!popoverTarget) setHoveredCell({ row: null, col: null });
+            }}
+          >
+            <thead>{renderWeekHeader()}</thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={headerColSpan} className="text-center p-4">
+                    Loading schedule...
                   </td>
                 </tr>
-              </tbody>
-              <tbody>
-                {sortedFrontWorkers.map((worker) => (
+              ) : (
+                sortedManagersAndGuards.map((worker) => (
                   <WorkerRow
                     key={worker.uid}
                     worker={worker}
                     scheduleData={scheduleData}
-                    onWorkerClick={setSelectedWorker}
+                    onWorkerClick={isManager ? setSelectedWorker : () => {}}
                     hoveredCell={hoveredCell}
                     popoverTarget={popoverTarget}
                     onCellEnter={setHoveredCell}
-                    onCellClick={handleCellClick}
+                    onCellClick={isManager ? handleCellClick : () => {}}
                     revealedHoursWorkerId={revealedHoursWorkerId}
                     onRevealHoursStart={handleRevealHoursStart}
                     onRevealHoursEnd={handleRevealHoursEnd}
                     isSelected={selectedWorkers.includes(worker.uid)}
                     onToggleSelect={handleToggleSelectWorker}
+                    isManager={isManager}
                   />
-                ))}
-              </tbody>
-            </>
-          )}
-        </table>
-      </div>
-      <EasyAddToolbar
-        presets={presets}
-        activePreset={activePreset}
-        onPresetSelect={(preset, role) => setActivePreset({ ...preset, role })}
-        onClear={() => setActivePreset(null)}
-      />
+                ))
+              )}
+            </tbody>
+            {sortedFrontWorkers.length > 0 && (
+              <>
+                <tbody>
+                  <tr className="bg-gray-100 text-center">
+                    {isManager && (
+                      <td className="p-2 pt-5">
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          onChange={(e) =>
+                            handleToggleSelectAll(e, sortedFrontWorkers)
+                          }
+                          checked={
+                            sortedFrontWorkers.length > 0 &&
+                            sortedFrontWorkers.every((fw) =>
+                              selectedWorkers.includes(fw.uid)
+                            )
+                          }
+                        />
+                      </td>
+                    )}
+                    <td
+                      colSpan={isManager ? "10" : "9"}
+                      className={`p-2 pt-5 border text-left text-sm font-semibold text-gray-600`}
+                    >
+                      Front Workers
+                    </td>
+                  </tr>
+                </tbody>
+                <tbody>
+                  {sortedFrontWorkers.map((worker) => (
+                    <WorkerRow
+                      key={worker.uid}
+                      worker={worker}
+                      scheduleData={scheduleData}
+                      onWorkerClick={isManager ? setSelectedWorker : () => {}}
+                      hoveredCell={hoveredCell}
+                      popoverTarget={popoverTarget}
+                      onCellEnter={setHoveredCell}
+                      onCellClick={isManager ? handleCellClick : () => {}}
+                      revealedHoursWorkerId={revealedHoursWorkerId}
+                      onRevealHoursStart={handleRevealHoursStart}
+                      onRevealHoursEnd={handleRevealHoursEnd}
+                      isSelected={selectedWorkers.includes(worker.uid)}
+                      onToggleSelect={handleToggleSelectWorker}
+                      isManager={isManager}
+                    />
+                  ))}
+                </tbody>
+              </>
+            )}
+          </table>
+        </div>
+      )}
+      {isManager && (
+        <EasyAddToolbar
+          presets={presets}
+          activePreset={activePreset}
+          onPresetSelect={(preset, role) =>
+            setActivePreset({ ...preset, role })
+          }
+          onClear={() => setActivePreset(null)}
+        />
+      )}
     </div>
   );
 };
@@ -1495,11 +1570,15 @@ const BulkActionsBar = ({
   canUndo,
   canRedo,
   onPrint,
+  isPublished,
+  hasUnpublishedChanges,
+  onPublish,
+  onUnpublish,
+  onPublishChanges,
 }) => {
   const [showMenu, setShowMenu] = React.useState(false);
   const menuRef = React.useRef(null);
 
-  // Close menu on outside click
   React.useEffect(() => {
     const handleClick = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -1514,102 +1593,106 @@ const BulkActionsBar = ({
 
   return (
     <div
-      className={`rounded-tl-lg border-t border-x rounded-tr-lg p-2 flex items-center justify-between courde bg-gray-500`}
+      className={`rounded-tl-lg border-t border-x rounded-tr-lg p-2 flex items-center justify-between bg-gray-500`}
     >
-      <span className={`ml-1 text-white`}>
-        {selectedWorkers.length} worker(s) selected
-      </span>
-
-      {selectedWorkers.length === 0 ? (
-        <div className="flex items-center gap-2 relative">
-          <button
-            onClick={handleUndo}
-            disabled={!canUndo}
-            className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50"
-          >
-            <Undo2 width={15} />
-            <span className="text-sm">Undo</span>
-          </button>
-          <button
-            onClick={handleRedo}
-            disabled={!canRedo}
-            className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50"
-          >
-            <span className="text-sm">Redo</span>
-            <Redo2 width={15} />
-          </button>
-          <button
-            onClick={onPrint}
-            className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50"
-          >
-            <Printer width={15} />
-            <span className="text-sm">Print</span>
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 relative">
-          <button
-            onClick={() => handleBulkUpdate([{ type: "OFF" }])}
-            className={`px-3 h-7 text-sm rounded-md bg-white ${
-              selectedWorkers.length === 0
-                ? "opacity-50 !cursor-default"
-                : "text-red-500  hover:bg-red-100 !cursor-pointer"
-            }`}
-            disabled={selectedWorkers.length === 0}
-          >
-            Set as OFF
-          </button>
-          <button
-            onClick={() => handleBulkUpdate(null)}
-            className={`px-3 h-7 text-sm rounded-md bg-white ${
-              selectedWorkers.length === 0
-                ? "opacity-50 !cursor-default"
-                : "bg-white hover:bg-gray-100 !cursor-pointer"
-            }`}
-            disabled={selectedWorkers.length === 0}
-          >
-            Reset Shifts
-          </button>
-          {/* Ellipsis button for popup menu */}
-          <div className="relative" ref={menuRef}>
+      <div className="flex-1">
+        {selectedWorkers.length > 0 ? (
+          <span className={`ml-1 text-white`}>
+            {selectedWorkers.length} worker(s) selected
+          </span>
+        ) : (
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowMenu((v) => !v)}
-              className={`w-7 h-7 flex items-center justify-center rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 `}
-              aria-label="More actions"
-              type="button"
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50"
             >
-              <svg
-                width="20"
-                height="20"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <circle cx="4" cy="10" r="1.7" />
-                <circle cx="10" cy="10" r="1.7" />
-                <circle cx="16" cy="10" r="1.7" />
-              </svg>
+              <Undo2 width={15} /> Undo
             </button>
-            {showMenu && (
-              <div className="absolute -right-4 mt-2 w-min bg-white border rounded shadow-lg z-50">
+            <button
+              onClick={handleRedo}
+              disabled={!canRedo}
+              className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50"
+            >
+              Redo <Redo2 width={15} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 relative">
+        {selectedWorkers.length > 0 ? (
+          <>
+            <button
+              onClick={() => handleBulkUpdate([{ type: "OFF" }])}
+              className="px-3 h-7 text-sm rounded-md bg-white text-red-500 hover:bg-red-100"
+            >
+              Set as OFF
+            </button>
+            <button
+              onClick={() => handleBulkUpdate(null)}
+              className="px-3 h-7 text-sm rounded-md bg-white hover:bg-gray-100"
+            >
+              Reset Shifts
+            </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowMenu((v) => !v)}
+                className="w-7 h-7 flex items-center justify-center rounded-md bg-white hover:bg-gray-100"
+              >
+                ...
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 mt-2 w-min bg-white border rounded shadow-lg z-50">
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      handleBulkRemove();
+                    }}
+                    className="block w-full text-nowrap text-sm text-left p-2 text-red-600 hover:bg-red-50"
+                  >
+                    Remove workers
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={onPrint}
+              className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white"
+            >
+              <Printer width={15} /> Print
+            </button>
+            {!isPublished ? (
+              <button
+                onClick={onPublish}
+                className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-green-500 text-white hover:bg-green-600"
+              >
+                <Send width={15} /> Publish
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                {hasUnpublishedChanges && (
+                  <button
+                    onClick={onPublishChanges}
+                    className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-blue-500 text-white hover:bg-blue-600"
+                  >
+                    <CloudUpload width={15} /> Publish Changes
+                  </button>
+                )}
                 <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    handleBulkRemove();
-                  }}
-                  className={`block w-full text-nowrap text-sm text-left p-2 text-red-600 hover:bg-red-50 ${
-                    selectedWorkers.length === 0
-                      ? "opacity-50 !cursor-default"
-                      : "bg-gray-100 hover:bg-gray-200 !cursor-pointer"
-                  }`}
-                  disabled={selectedWorkers.length === 0}
+                  onClick={onUnpublish}
+                  className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-gray-600 text-white hover:bg-gray-700"
                 >
-                  Remove workers
+                  <EyeOff width={15} /> Unpublish
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

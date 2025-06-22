@@ -9,7 +9,7 @@ import {
   doc,
   getDoc,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../firebase"; // Corrected import path
 import ScheduleView from "./ScheduleView";
 import AddWorkerModal from "./AddWorkerModal";
 import EditPresetsModal from "./EditPresetsModal"; // Import the new modal
@@ -116,7 +116,12 @@ const ManagerDashboard = ({ user, company }) => {
           <p className="text-gray-500">Loading workers...</p>
         </div>
       ) : (
-        <ScheduleView company={company} workers={workers} presets={presets} />
+        <ScheduleView
+          company={company}
+          workers={workers}
+          presets={presets}
+          isManager={true}
+        />
       )}
     </div>
   );

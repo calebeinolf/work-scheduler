@@ -1412,60 +1412,60 @@ const ScheduleView = ({
     setCurrentDate(new Date());
   };
 
-  // Second scrollbar functionality
+  // --- START: Dual Scrollbar Logic ---
   const mainContentRef = useRef(null);
   const topScrollbarRef = useRef(null);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const isSyncingRef = useRef(false);
+  const [showTopScrollbar, setShowTopScrollbar] = useState(false);
+
   useEffect(() => {
     const mainContentEl = mainContentRef.current;
     const topScrollbarEl = topScrollbarRef.current;
 
-    if (!mainContentEl || !topScrollbarEl) return;
+    if (!mainContentEl || !topScrollbarEl || loading) return;
 
-    // Set the width of the top scrollbar's content to match the main content's scroll width
     const topScrollbarContent = topScrollbarEl.querySelector("div");
-    if (topScrollbarContent) {
-      topScrollbarContent.style.width = `${mainContentEl.scrollWidth}px`;
-    }
 
-    // --- Event Listeners for Synchronization ---
+    const checkOverflow = () => {
+      if (mainContentEl.scrollWidth > mainContentEl.clientWidth) {
+        setShowTopScrollbar(true);
+      } else {
+        setShowTopScrollbar(false);
+      }
+      if (topScrollbarContent) {
+        topScrollbarContent.style.width = `${mainContentEl.scrollWidth}px`;
+      }
+    };
+
+    checkOverflow();
 
     const handleMainScroll = () => {
-      if (isSyncing) return;
-      setIsSyncing(true);
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
       topScrollbarEl.scrollLeft = mainContentEl.scrollLeft;
-      setIsSyncing(false);
+      isSyncingRef.current = false;
     };
 
     const handleTopScroll = () => {
-      if (isSyncing) return;
-      setIsSyncing(true);
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
       mainContentEl.scrollLeft = topScrollbarEl.scrollLeft;
-      setIsSyncing(false);
+      isSyncingRef.current = false;
     };
 
     mainContentEl.addEventListener("scroll", handleMainScroll);
     topScrollbarEl.addEventListener("scroll", handleTopScroll);
 
-    // --- ResizeObserver to handle content width changes ---
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        if (topScrollbarContent) {
-          topScrollbarContent.style.width = `${entry.target.scrollWidth}px`;
-        }
-      }
-    });
-
+    const resizeObserver = new ResizeObserver(checkOverflow);
     resizeObserver.observe(mainContentEl);
 
-    // Cleanup function
     return () => {
       mainContentEl.removeEventListener("scroll", handleMainScroll);
       topScrollbarEl.removeEventListener("scroll", handleTopScroll);
       resizeObserver.unobserve(mainContentEl);
     };
-  }, [isSyncing, scheduleData]);
+  }, [scheduleData, workers, loading]); // Rerun when data or loading state changes
+  // --- END: Dual Scrollbar Logic ---
 
   return (
     <div className="pb-24">
@@ -1571,8 +1571,11 @@ const ScheduleView = ({
       {/* Top Scrollbar */}
       <div
         ref={topScrollbarRef}
-        className="overflow-x-auto overflow-y-hidden"
-        style={{ height: "15px" }}
+        className="overflow-x-auto overflow-y-hidden transition-all duration-300"
+        style={{
+          height: showTopScrollbar ? "15px" : "0",
+          visibility: showTopScrollbar ? "visible" : "hidden",
+        }}
       >
         <div style={{ height: "1px" }}></div>
       </div>

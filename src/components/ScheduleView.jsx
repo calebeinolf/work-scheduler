@@ -10,7 +10,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import EditWorkerModal from "./EditWorkerModal"; // Import the new modal
+import EditWorkerModal from "./EditWorkerModal";
 import {
   ArrowLeft,
   ArrowRight,
@@ -24,8 +24,50 @@ import {
   EyeOff, // Unpublish Icon
   CloudUpload,
   ChevronsLeft,
-  ChevronsRight, // Publish Changes Icon
+  ChevronsRight,
+  ChevronLeft,
+  ChevronRight,
+  Ellipsis,
+  EllipsisVertical,
 } from "lucide-react";
+
+// --- Deep object comparison helper ---
+function deepEqual(objA, objB) {
+  if (objA === objB) return true;
+
+  if (
+    objA === null ||
+    objA === undefined ||
+    objB === null ||
+    objB === undefined
+  ) {
+    return objA === objB;
+  }
+
+  if (objA.constructor !== objB.constructor) return false;
+
+  if (Array.isArray(objA)) {
+    if (objA.length !== objB.length) return false;
+    for (let i = 0; i < objA.length; i++) {
+      if (!deepEqual(objA[i], objB[i])) return false;
+    }
+    return true;
+  }
+
+  if (typeof objA === "object") {
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+      if (!keysB.includes(key) || !deepEqual(objA[key], objB[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  return false;
+}
 
 // --- Time formatting and calculation helpers ---
 const formatTime12hr = (time24) => {
@@ -311,7 +353,6 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
 };
 
 // --- Helper to get the start of a week (Sunday) for any given date ---
-// Do not delete this method, it is neccessary
 const getSundayOfWeek = (d) => {
   const date = new Date(d);
   const day = date.getDay(); // Sunday - Saturday : 0 - 6
@@ -341,7 +382,11 @@ const WorkerDetailModal = ({
           <h3 className="text-2xl font-bold text-gray-800">
             {worker.fullName}
           </h3>
-          <p className="text-gray-500">{worker.isMinor ? "Minor" : "Adult"}</p>
+          {isManager && (
+            <p className="text-gray-500">
+              {worker.isMinor ? "Minor" : "Adult"}
+            </p>
+          )}
           <div className="mt-6 space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="font-semibold text-gray-600">Position:</span>
@@ -416,7 +461,6 @@ const WorkerRow = ({
   onToggleSelect,
   isManager,
   currentUserId,
-  currentUserRole,
 }) => {
   const getCellClass = (colKey) => {
     if (isSelected && isManager) return ""; // Selection highlight takes priority, disable hover highlight
@@ -473,35 +517,38 @@ const WorkerRow = ({
     return totalHours;
   }, [weeklyShifts, worker.isMinor]);
 
-  // Determine if this row should be highlighted for the current user (worker, not head manager)
-  const isCurrentUserWorker =
-    currentUserId === worker.uid &&
-    currentUserRole &&
-    currentUserRole.toLowerCase() !== "head manager";
+  const isCurrentUserWorker = currentUserId === worker.uid;
 
   return (
     <tr
       key={worker.uid}
       className={`${
-        (isSelected && isManager) || isCurrentUserWorker
+        (isSelected && isManager) || (isCurrentUserWorker && !isManager)
           ? "bg-indigo-200"
           : "bg-white"
       }`}
     >
       {isManager && (
-        <td className="p-1 border text-center">
+        <td
+          className={`p-1 border text-center cursor-pointer transition-colors duration-150 ${getCellClass(
+            "name"
+          )}`}
+          onClick={() => onToggleSelect(worker.uid)}
+          onMouseEnter={() => handleMouseEnter(worker.uid, "name")}
+        >
           <input
             type="checkbox"
-            className="rounded"
+            className="rounded cursor-pointer"
             checked={isSelected}
             onChange={() => onToggleSelect(worker.uid)}
+            onClick={(e) => e.stopPropagation()}
           />
         </td>
       )}
       <td
-        className={`p-1 border font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto transition-colors duration-150 ${
-          isManager ? "cursor-pointer" : ""
-        } ${getCellClass("name")}`}
+        className={`p-1 border font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto transition-colors duration-150 cursor-pointer ${getCellClass(
+          "name"
+        )}`}
         onClick={() => onWorkerClick(worker)}
         onMouseEnter={() => handleMouseEnter(worker.uid, "name")}
       >
@@ -666,7 +713,6 @@ const ScheduleView = ({
   presets,
   isManager = true,
   currentUserId,
-  currentUserRole,
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
@@ -792,19 +838,18 @@ const ScheduleView = ({
   }, [company, weekStartDate]);
 
   useEffect(() => {
-    if (!scheduleDocId || workers.length === 0) {
-      if (workers.length === 0 && !loading) setLoading(false);
-      return;
-    }
+    if (!scheduleDocId) return;
 
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
     const unsubscribe = onSnapshot(scheduleDocRef, (docSnap) => {
-      if (isLocalUpdateRef.current && isManager) {
-        isLocalUpdateRef.current = false;
-        return;
-      }
       const docData = docSnap.data() || {};
       setScheduleDocData(docData);
+
+      if (isLocalUpdateRef.current && isManager) {
+        isLocalUpdateRef.current = false;
+        setLoading(false);
+        return;
+      }
 
       const shiftsForView = isManager
         ? docData.shifts || {}
@@ -812,9 +857,7 @@ const ScheduleView = ({
         ? docData.publishedShifts || {}
         : {};
 
-      if (
-        JSON.stringify(shiftsForView) === JSON.stringify(history[historyIndex])
-      ) {
+      if (deepEqual(shiftsForView, history[historyIndex])) {
         setLoading(false);
         return;
       }
@@ -824,15 +867,7 @@ const ScheduleView = ({
       if (isManager) {
         workers.forEach((worker) => {
           if (worker.uid && !updatedShifts[worker.uid]) {
-            updatedShifts[worker.uid] = {
-              sat: null,
-              sun: null,
-              mon: null,
-              tue: null,
-              wed: null,
-              thu: null,
-              fri: null,
-            };
+            updatedShifts[worker.uid] = {};
             needsUpdate = true;
           }
         });
@@ -856,14 +891,16 @@ const ScheduleView = ({
     });
 
     return () => unsubscribe();
-  }, [scheduleDocId, workers, company, weekStartDate, isManager]);
+  }, [scheduleDocId, isManager, workers, company, weekStartDate]);
 
   const isPublished = scheduleDocData?.isPublished || false;
-  const hasUnpublishedChanges =
-    isManager &&
-    isPublished &&
-    JSON.stringify(scheduleDocData?.shifts) !==
-      JSON.stringify(scheduleDocData?.publishedShifts);
+
+  const hasUnpublishedChanges = useMemo(() => {
+    if (!isManager || !isPublished || !scheduleDocData) {
+      return false;
+    }
+    return !deepEqual(scheduleData, scheduleDocData.publishedShifts);
+  }, [isManager, isPublished, scheduleData, scheduleDocData]);
 
   const pushNewState = (newShifts) => {
     const newHistory = history.slice(0, historyIndex + 1);
@@ -1052,10 +1089,12 @@ const ScheduleView = ({
   const handlePublish = async () => {
     if (!isManager || !scheduleDocId) return;
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-    await updateDoc(scheduleDocRef, {
+    const updateData = {
       isPublished: true,
       publishedShifts: scheduleData,
-    });
+    };
+    await updateDoc(scheduleDocRef, updateData);
+    setScheduleDocData((prev) => ({ ...prev, ...updateData }));
   };
 
   const handleUnpublish = async () => {
@@ -1068,12 +1107,15 @@ const ScheduleView = ({
       return;
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
     await updateDoc(scheduleDocRef, { isPublished: false });
+    setScheduleDocData((prev) => ({ ...prev, isPublished: false }));
   };
 
   const handlePublishChanges = async () => {
     if (!isManager || !scheduleDocId) return;
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-    await updateDoc(scheduleDocRef, { publishedShifts: scheduleData });
+    const updateData = { publishedShifts: scheduleData };
+    await updateDoc(scheduleDocRef, updateData);
+    setScheduleDocData((prev) => ({ ...prev, ...updateData }));
   };
 
   const handleRevealHoursStart = (workerId) => {
@@ -1290,11 +1332,10 @@ const ScheduleView = ({
             h1, h2 { text-align: center; }
             .section-header { 
               font-size: 12px; 
+              color: #6b7280
               font-weight: bold; 
               padding: 12px 8px; 
               background-color: #f3f4f6; 
-              margin-top: 20px;
-              border-top: 2px solid #d1d5db;
               border-bottom: 1px solid #e5e7eb;
             }
           </style>
@@ -1400,23 +1441,22 @@ const ScheduleView = ({
       )}
 
       <div className="flex justify-between items-center mb-4 px-1">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => handleWeekChange(-1)}
             className="h-9 w-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
           >
-            <ArrowLeft width={16} />
+            <ChevronLeft width={19} />
           </button>
 
           <button
-            className={`flex items-center gap-2 text-blue-500 ${
+            className={`h-9 w-9 flex items-center justify-center gap-2 text-blue-500 bg-blue-100 rounded-full ${
               (isCurrentWeek || weekStartDate < getSundayOfWeek(new Date())) &&
               "opacity-0 !cursor-default"
             }`}
             onClick={handleGoToCurrentWeek}
           >
-            <ChevronsLeft width={15} />
-            {/* <span className="text-sm font-medium">Back to this week</span> */}
+            <ChevronsLeft width={19} />
           </button>
         </div>
 
@@ -1424,23 +1464,22 @@ const ScheduleView = ({
           {formatWeekRange(weekStartDate, weekEndDate)}
         </h3>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button
-            className={`flex items-center gap-2 text-blue-500 ${
+            className={`h-9 w-9 flex items-center justify-center gap-2 text-blue-500 bg-blue-100 rounded-full ${
               (isCurrentWeek || weekStartDate > getSundayOfWeek(new Date())) &&
               "opacity-0 !cursor-default"
             }`}
             onClick={handleGoToCurrentWeek}
           >
-            {/* <span className="text-sm font-medium">Back to this week</span> */}
-            <ChevronsRight width={15} />
+            <ChevronsRight width={19} />
           </button>
 
           <button
             onClick={() => handleWeekChange(1)}
             className="h-9 w-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
           >
-            <ArrowRight width={16} />
+            <ChevronRight width={19} />
           </button>
         </div>
       </div>
@@ -1494,7 +1533,7 @@ const ScheduleView = ({
                     key={worker.uid}
                     worker={worker}
                     scheduleData={scheduleData}
-                    onWorkerClick={isManager ? setSelectedWorker : () => {}}
+                    onWorkerClick={setSelectedWorker}
                     hoveredCell={hoveredCell}
                     popoverTarget={popoverTarget}
                     onCellEnter={setHoveredCell}
@@ -1506,7 +1545,6 @@ const ScheduleView = ({
                     onToggleSelect={handleToggleSelectWorker}
                     isManager={isManager}
                     currentUserId={currentUserId}
-                    currentUserRole={currentUserRole}
                   />
                 ))
               )}
@@ -1516,7 +1554,7 @@ const ScheduleView = ({
                 <tbody>
                   <tr className="bg-gray-100 text-center">
                     {isManager && (
-                      <td className="p-2 pt-5">
+                      <td className="p-2">
                         <input
                           type="checkbox"
                           className="rounded"
@@ -1533,8 +1571,8 @@ const ScheduleView = ({
                       </td>
                     )}
                     <td
-                      colSpan={10}
-                      className={`p-2 pt-5 border text-left text-sm font-semibold text-gray-600`}
+                      colSpan={isManager ? 10 : 9}
+                      className={`p-2 border text-left text-sm font-semibold text-gray-600`}
                     >
                       Front Workers
                     </td>
@@ -1558,7 +1596,6 @@ const ScheduleView = ({
                       onToggleSelect={handleToggleSelectWorker}
                       isManager={isManager}
                       currentUserId={currentUserId}
-                      currentUserRole={currentUserRole}
                     />
                   ))}
                 </tbody>
@@ -1626,14 +1663,18 @@ const BulkActionsBar = ({
             <button
               onClick={handleUndo}
               disabled={!canUndo}
-              className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50"
+              className={`flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50 ${
+                canUndo ? "hover:bg-gray-100" : "!cursor-default"
+              }`}
             >
               <Undo2 width={15} /> Undo
             </button>
             <button
               onClick={handleRedo}
               disabled={!canRedo}
-              className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50"
+              className={`flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50 ${
+                canRedo ? "hover:bg-gray-100" : "!cursor-default"
+              }`}
             >
               Redo <Redo2 width={15} />
             </button>
@@ -1661,7 +1702,7 @@ const BulkActionsBar = ({
                 onClick={() => setShowMenu((v) => !v)}
                 className="w-7 h-7 flex items-center justify-center rounded-md bg-white hover:bg-gray-100"
               >
-                ...
+                <Ellipsis width={16} />
               </button>
               {showMenu && (
                 <div className="absolute right-0 mt-2 w-min bg-white border rounded shadow-lg z-50">
@@ -1670,9 +1711,9 @@ const BulkActionsBar = ({
                       setShowMenu(false);
                       handleBulkRemove();
                     }}
-                    className="block w-full text-nowrap text-sm text-left p-2 text-red-600 hover:bg-red-50"
+                    className="block w-full rounded-sm text-nowrap text-sm text-left p-2 text-red-600 hover:bg-red-50"
                   >
-                    Remove workers
+                    Remove worker(s)
                   </button>
                 </div>
               )}
@@ -1695,14 +1736,15 @@ const BulkActionsBar = ({
               </button>
             ) : (
               <div className="flex items-center gap-2">
-                {hasUnpublishedChanges && (
-                  <button
-                    onClick={onPublishChanges}
-                    className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-blue-500 text-white hover:bg-blue-600"
-                  >
-                    <CloudUpload width={15} /> Publish Changes
-                  </button>
-                )}
+                <button
+                  onClick={onPublishChanges}
+                  disabled={!hasUnpublishedChanges}
+                  className={`flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-blue-500 text-white  disabled:opacity-50 disabled:!cursor-default ${
+                    hasUnpublishedChanges ? "hover:bg-blue-600" : ""
+                  }`}
+                >
+                  <CloudUpload width={15} /> Publish Changes
+                </button>
                 <button
                   onClick={onUnpublish}
                   className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-gray-600 text-white hover:bg-gray-700"

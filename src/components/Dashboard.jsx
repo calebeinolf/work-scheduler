@@ -131,25 +131,25 @@ const Dashboard = () => {
   };
 
   // Only render the dashboard UI after loading is complete
-  if (loading) {
-    return (
-      <div className="text-center p-10">
-        <p className="text-lg">Loading Dashboard...</p>
-      </div>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <div className="text-center p-10">
+  //       <p className="text-lg">Loading Dashboard...</p>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen">
-      <header className="bg-white shadow-sm">
-        <nav className="container mx-auto px-6 py-2 flex justify-between items-center">
+      <header className="bg-white shadow-sm px-6 py-2">
+        <nav className="max-w-6xl mx-auto flex justify-between items-center">
           <h1 className="text-xl font-semibold text-blue-600">
             {companyData ? companyData.name : "Scheduler"}
           </h1>
 
           <div className="flex items-center gap-4">
             {userData && (
-              <div className="p-2 rounded-lg flex items-center no-wrap gap-2">
+              <div className=" rounded-lg flex items-center no-wrap gap-2">
                 <span className="text-sm text-nowrap font-medium text-gray-600">
                   {userData.fullName || userData.email}
                 </span>
@@ -166,7 +166,9 @@ const Dashboard = () => {
         </nav>
       </header>
 
-      <main className="container mx-auto p-6">{renderContent()}</main>
+      <main className="py-6 px-2 sm:px-4 md:px-6 lg:px-8 xl:px-10 max-w-7xl mx-auto">
+        {renderContent()}
+      </main>
     </div>
   );
 };

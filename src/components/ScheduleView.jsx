@@ -530,7 +530,7 @@ const WorkerRow = ({
     >
       {isManager && (
         <td
-          className={`p-1 border text-center cursor-pointer transition-colors duration-150 ${getCellClass(
+          className={`p-1 border text-center cursor-pointer transition-colors duration-100 ${getCellClass(
             "name"
           )}`}
           onClick={() => onToggleSelect(worker.uid)}
@@ -546,7 +546,7 @@ const WorkerRow = ({
         </td>
       )}
       <td
-        className={`p-1 border font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto transition-colors duration-150 cursor-pointer ${getCellClass(
+        className={`p-1 border font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto transition-colors duration-100 cursor-pointer ${getCellClass(
           "name"
         )}`}
         onClick={() => onWorkerClick(worker)}
@@ -563,7 +563,7 @@ const WorkerRow = ({
           )}
       </td>
       <td
-        className={`p-1 border text-center transition-colors duration-150 ${getCellClass(
+        className={`p-1 border text-center transition-colors duration-100 ${getCellClass(
           "yos"
         )}`}
         onMouseEnter={() => handleMouseEnter(worker.uid, "yos")}
@@ -581,7 +581,7 @@ const WorkerRow = ({
         return (
           <td
             key={day}
-            className={`p-1 border text-center transition-colors duration-150 ${
+            className={`p-1 border text-center transition-colors duration-100 ${
               isManager ? "cursor-pointer" : ""
             } ${getCellClass(day)}`}
             onMouseEnter={() => handleMouseEnter(worker.uid, day)}
@@ -632,7 +632,7 @@ const WorkerRow = ({
       <td
         className={`p-1 border ${
           weeklyTotal > 40 && "text-red-500 bg-red-50 border-black"
-        } text-center font-medium transition-colors duration-150 cursor-pointer ${getCellClass(
+        } text-center font-medium transition-colors duration-100 cursor-pointer ${getCellClass(
           "total"
         )}`}
         onMouseEnter={() => handleMouseEnter(worker.uid, "total")}
@@ -1196,7 +1196,7 @@ const ScheduleView = ({
           Worker
         </th>
         <th
-          className={`p-2 border text-sm font-semibold text-gray-600 transition-colors duration-150 ${
+          className={`p-2 border text-sm font-semibold text-gray-600 transition-colors duration-100 ${
             hoveredCell.col === "yos" ? "bg-blue-100" : "bg-gray-100"
           }`}
           onMouseEnter={() => handleHeaderMouseEnter("yos")}
@@ -1206,7 +1206,7 @@ const ScheduleView = ({
         {days.map((dayKey, i) => (
           <th
             key={dayKey}
-            className={`p-2 border text-sm font-semibold text-gray-600 transition-colors duration-150 ${
+            className={`p-2 border text-sm font-semibold text-gray-600 transition-colors duration-100 ${
               hoveredCell.col === dayKey ? "bg-blue-100" : "bg-gray-100"
             }`}
             onMouseEnter={() => handleHeaderMouseEnter(dayKey)}
@@ -1225,7 +1225,7 @@ const ScheduleView = ({
           </th>
         ))}
         <th
-          className={`p-2 border text-sm font-semibold text-gray-600 transition-colors duration-150 ${
+          className={`p-2 border text-sm font-semibold text-gray-600 transition-colors duration-100 ${
             hoveredCell.col === "total" ? "bg-blue-100" : "bg-gray-100"
           }`}
           onMouseEnter={() => handleHeaderMouseEnter("total")}
@@ -1412,6 +1412,61 @@ const ScheduleView = ({
     setCurrentDate(new Date());
   };
 
+  // Second scrollbar functionality
+  const mainContentRef = useRef(null);
+  const topScrollbarRef = useRef(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  useEffect(() => {
+    const mainContentEl = mainContentRef.current;
+    const topScrollbarEl = topScrollbarRef.current;
+
+    if (!mainContentEl || !topScrollbarEl) return;
+
+    // Set the width of the top scrollbar's content to match the main content's scroll width
+    const topScrollbarContent = topScrollbarEl.querySelector("div");
+    if (topScrollbarContent) {
+      topScrollbarContent.style.width = `${mainContentEl.scrollWidth}px`;
+    }
+
+    // --- Event Listeners for Synchronization ---
+
+    const handleMainScroll = () => {
+      if (isSyncing) return;
+      setIsSyncing(true);
+      topScrollbarEl.scrollLeft = mainContentEl.scrollLeft;
+      setIsSyncing(false);
+    };
+
+    const handleTopScroll = () => {
+      if (isSyncing) return;
+      setIsSyncing(true);
+      mainContentEl.scrollLeft = topScrollbarEl.scrollLeft;
+      setIsSyncing(false);
+    };
+
+    mainContentEl.addEventListener("scroll", handleMainScroll);
+    topScrollbarEl.addEventListener("scroll", handleTopScroll);
+
+    // --- ResizeObserver to handle content width changes ---
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        if (topScrollbarContent) {
+          topScrollbarContent.style.width = `${entry.target.scrollWidth}px`;
+        }
+      }
+    });
+
+    resizeObserver.observe(mainContentEl);
+
+    // Cleanup function
+    return () => {
+      mainContentEl.removeEventListener("scroll", handleMainScroll);
+      topScrollbarEl.removeEventListener("scroll", handleTopScroll);
+      resizeObserver.unobserve(mainContentEl);
+    };
+  }, [isSyncing, scheduleData]);
+
   return (
     <div className="pb-24">
       {isManager && (
@@ -1440,7 +1495,8 @@ const ScheduleView = ({
         />
       )}
 
-      <div className="flex justify-between items-center mb-4 px-1">
+      {/* Date & Arrows */}
+      <div className="max-w-6xl mx-auto flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleWeekChange(-1)}
@@ -1484,6 +1540,7 @@ const ScheduleView = ({
         </div>
       </div>
 
+      {/* Bulk Actions Bar */}
       {isManager && (
         <BulkActionsBar
           selectedWorkers={selectedWorkers}
@@ -1502,6 +1559,7 @@ const ScheduleView = ({
         />
       )}
 
+      {/* No Schedule Published Message */}
       {!isManager && !loading && !isPublished && (
         <div className="text-center p-8 bg-gray-50 rounded-lg">
           <p className="text-gray-600">
@@ -1510,8 +1568,18 @@ const ScheduleView = ({
         </div>
       )}
 
+      {/* Top Scrollbar */}
+      <div
+        ref={topScrollbarRef}
+        className="overflow-x-auto overflow-y-hidden"
+        style={{ height: "15px" }}
+      >
+        <div style={{ height: "1px" }}></div>
+      </div>
+
+      {/* Schedule Table */}
       {((isManager && !loading) || (!isManager && isPublished)) && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" ref={mainContentRef}>
           <table
             ref={tableRef}
             className="w-full border-collapse border"
@@ -1604,6 +1672,8 @@ const ScheduleView = ({
           </table>
         </div>
       )}
+
+      {/* Floating Easy Add Toolbar */}
       {isManager && (
         <EasyAddToolbar
           presets={presets}

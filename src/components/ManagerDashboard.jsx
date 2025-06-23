@@ -67,7 +67,7 @@ const ManagerDashboard = ({ user, company }) => {
         companyId={company.id}
       />
 
-      <div className="flex justify-between items-start mb-6 gap-4">
+      <div className="max-w-6xl mx-auto flex justify-between items-start mb-6 gap-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">
             Manager Dashboard

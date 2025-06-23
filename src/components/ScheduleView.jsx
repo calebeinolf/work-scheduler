@@ -484,11 +484,11 @@ const WorkerRow = ({
     const category = getShiftCategory(shift);
     switch (category) {
       case "All Day":
-        return "bg-green-100";
+        return "bg-green-200/80";
       case "Opening":
-        return "bg-yellow-100";
+        return "bg-yellow-200/80";
       case "Closing":
-        return "bg-purple-100";
+        return "bg-purple-200/80";
       default:
         return "";
     }
@@ -648,9 +648,25 @@ const WorkerRow = ({
 
 const FloatingPresetChip = ({ preset, position }) => {
   if (!preset) return null;
+
+  // Helper to get the highlight class for the shift
+  const getShiftHighlightClass = (shift) => {
+    if (shift.role === "LESSONS") return "bg-white";
+    const openingTime = "13:00";
+    const closingTime = "18:00";
+    const isOpening = shift.start <= openingTime;
+    const isClosing = shift.end >= closingTime;
+    if (isOpening && isClosing) return "bg-green-200";
+    if (isOpening) return "bg-yellow-200";
+    if (isClosing) return "bg-purple-200";
+    return "bg-white";
+  };
+
+  const highlightClass = getShiftHighlightClass(preset);
+
   return (
     <div
-      className="fixed z-50 pointer-events-none bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg"
+      className={`fixed z-50 pointer-events-none text-xs font-medium px-2 py-1 rounded shadow-lg ${highlightClass}`}
       style={{ top: position.y + 10, left: position.x + 10 }}
     >
       {`${formatTime12hr(preset.start).replace(/:00$/, "")}-${formatTime12hr(
@@ -667,11 +683,11 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
   );
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-auto bg-gray-800/90 backdrop-blur-sm text-white p-2 rounded-t-lg shadow-2xl flex items-center gap-2 z-40">
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-auto bg-white  p-2 rounded-t-lg shadow border border-b-0 flex items-center gap-2 z-40">
       <select
         value={selectedRole}
         onChange={(e) => setSelectedRole(e.target.value)}
-        className="bg-gray-700 text-white border-none rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
+        className="bg-gray-200 border-none rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
       >
         <option>GUARD</option>
         <option>MANAGER</option>
@@ -685,8 +701,8 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
             onClick={() => onPresetSelect(p, selectedRole)}
             className={`text-xs px-2 py-1 rounded ${
               activePreset?.id === p.id
-                ? "bg-blue-500 ring-2 ring-blue-300"
-                : "bg-gray-600 hover:bg-gray-500"
+                ? "bg-blue-500 ring-2 ring-blue-300 text-white"
+                : "bg-gray-200 hover:bg-gray-300"
             }`}
           >
             {`${formatTime12hr(p.start).replace(/:00$/, "")}-${formatTime12hr(
@@ -698,9 +714,10 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
       {activePreset && (
         <button
           onClick={onClear}
-          className="bg-red-500 hover:bg-red-600 text-white rounded-full h-6 w-6 flex items-center justify-center"
+          className="bg-red-500 hover:bg-red-600 text-white pl-1 pr-2 py-1 rounded flex items-center justify-center gap-1"
         >
-          <X size={16} />
+          <X size={14} />
+          <span className="text-xs">Esc</span>
         </button>
       )}
     </div>
@@ -1085,6 +1102,31 @@ const ScheduleView = ({
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
     await updateDoc(scheduleDocRef, { shifts: nextState });
   };
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    if (!isManager) return;
+    const handleKeyDown = (e) => {
+      // Ctrl+Z (undo)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
+        e.preventDefault();
+        handleUndo();
+      }
+      // Ctrl+Shift+Z (redo on Mac) or Ctrl+Y (redo on Windows)
+      if (
+        ((e.ctrlKey || e.metaKey) &&
+          e.shiftKey &&
+          e.key.toLowerCase() === "z") ||
+        ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "y")
+      ) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line
+  }, [isManager, historyIndex, history, scheduleDocId]);
 
   const handlePublish = async () => {
     if (!isManager || !scheduleDocId) return;
@@ -1722,6 +1764,28 @@ const BulkActionsBar = ({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showMenu]);
 
+  // Tooltip state for Undo/Redo
+  const [undoTooltip, setUndoTooltip] = React.useState(false);
+  const [redoTooltip, setRedoTooltip] = React.useState(false);
+  const undoTimeout = React.useRef();
+  const redoTimeout = React.useRef();
+
+  // Tooltip handlers
+  const handleUndoMouseEnter = () => {
+    undoTimeout.current = setTimeout(() => setUndoTooltip(true), 600);
+  };
+  const handleUndoMouseLeave = () => {
+    clearTimeout(undoTimeout.current);
+    setUndoTooltip(false);
+  };
+  const handleRedoMouseEnter = () => {
+    redoTimeout.current = setTimeout(() => setRedoTooltip(true), 600);
+  };
+  const handleRedoMouseLeave = () => {
+    clearTimeout(redoTimeout.current);
+    setRedoTooltip(false);
+  };
+
   return (
     <div
       className={`rounded-tl-lg border-t border-x rounded-tr-lg p-2 flex items-center justify-between bg-gray-500`}
@@ -1733,24 +1797,42 @@ const BulkActionsBar = ({
           </span>
         ) : (
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleUndo}
-              disabled={!canUndo}
-              className={`flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50 ${
-                canUndo ? "hover:bg-gray-100" : "!cursor-default"
-              }`}
-            >
-              <Undo2 width={15} /> Undo
-            </button>
-            <button
-              onClick={handleRedo}
-              disabled={!canRedo}
-              className={`flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50 ${
-                canRedo ? "hover:bg-gray-100" : "!cursor-default"
-              }`}
-            >
-              Redo <Redo2 width={15} />
-            </button>
+            <div className="relative">
+              <button
+                onClick={handleUndo}
+                disabled={!canUndo}
+                className={`flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50 ${
+                  canUndo ? "hover:bg-gray-100" : "!cursor-default"
+                }`}
+                onMouseEnter={handleUndoMouseEnter}
+                onMouseLeave={handleUndoMouseLeave}
+              >
+                <Undo2 width={15} /> Undo
+              </button>
+              {undoTooltip && (
+                <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-gray-800 text-white text-xs rounded px-2 py-1 z-50 whitespace-nowrap pointer-events-none">
+                  Ctrl+Z
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <button
+                onClick={handleRedo}
+                disabled={!canRedo}
+                className={`flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50 ${
+                  canRedo ? "hover:bg-gray-100" : "!cursor-default"
+                }`}
+                onMouseEnter={handleRedoMouseEnter}
+                onMouseLeave={handleRedoMouseLeave}
+              >
+                Redo <Redo2 width={15} />
+              </button>
+              {redoTooltip && (
+                <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-gray-800 text-white text-xs rounded px-2 py-1 z-50 whitespace-nowrap pointer-events-none">
+                  Ctrl+Shift+Z
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -1803,7 +1885,7 @@ const BulkActionsBar = ({
             {!isPublished ? (
               <button
                 onClick={onPublish}
-                className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-green-500 text-white hover:bg-green-600"
+                className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-green-600 text-white hover:bg-green-700"
               >
                 <Send width={15} /> Publish
               </button>

@@ -683,11 +683,11 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
   );
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-auto bg-white  p-2 rounded-t-lg shadow border border-b-0 flex items-center gap-2 z-40">
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-auto bg-gray-500 text-white p-2 rounded-t-lg shadow border border-b-0 flex items-center gap-2 z-40">
       <select
         value={selectedRole}
         onChange={(e) => setSelectedRole(e.target.value)}
-        className="bg-gray-200 border-none rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
+        className="bg-gray-600 border-none rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
       >
         <option>GUARD</option>
         <option>MANAGER</option>
@@ -702,7 +702,7 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
             className={`text-xs px-2 py-1 rounded ${
               activePreset?.id === p.id
                 ? "bg-blue-500 ring-2 ring-blue-300 text-white"
-                : "bg-gray-200 hover:bg-gray-300"
+                : "bg-gray-600 hover:bg-gray-700"
             }`}
           >
             {`${formatTime12hr(p.start).replace(/:00$/, "")}-${formatTime12hr(
@@ -714,7 +714,7 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
       {activePreset && (
         <button
           onClick={onClear}
-          className="bg-red-500 hover:bg-red-600 text-white pl-1 pr-2 py-1 rounded flex items-center justify-center gap-1"
+          className="bg-red-500 hover:bg-red-600 text-white font-medium pl-1 pr-2 py-1 rounded flex items-center justify-center gap-1"
         >
           <X size={14} />
           <span className="text-xs">Esc</span>

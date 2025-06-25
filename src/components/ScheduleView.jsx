@@ -271,7 +271,6 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
                   <option>FRONT</option>
                   <option>LESSONS</option>
                   <option>CAMP</option>
-                  <option>SWIM MEET</option>
                 </select>
                 {editingCustomIndex === index ? (
                   <div className="flex items-center space-x-2">
@@ -1909,12 +1908,6 @@ const BulkActionsBar = ({
               className="px-3 h-7 text-sm rounded-md bg-white text-red-500 hover:bg-red-100"
             >
               Set as OFF
-            </button>
-            <button
-              onClick={() => handleBulkUpdate([{ type: "SWIM MEET" }])}
-              className="px-3 h-7 text-sm rounded-md bg-white text-orange-600 hover:bg-orange-100"
-            >
-              Set as SWIM MEET
             </button>
             <button
               onClick={() => handleBulkUpdate(null)}

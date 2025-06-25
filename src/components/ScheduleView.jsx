@@ -157,6 +157,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
         if (title.includes("manager") || title.includes("head guard"))
           defaultType = "MANAGER";
         else if (title.includes("front")) defaultType = "FRONT";
+        else if (title.includes("camp")) defaultType = "CAMP";
       }
       startingShifts.push({ start: "09:00", end: "17:00", type: defaultType });
     }
@@ -269,6 +270,8 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
                   <option>MANAGER</option>
                   <option>FRONT</option>
                   <option>LESSONS</option>
+                  <option>CAMP</option>
+                  <option>SWIM MEET</option>
                 </select>
                 {editingCustomIndex === index ? (
                   <div className="flex items-center space-x-2">
@@ -347,10 +350,16 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
             Reset
           </button>
           <button
+            onClick={() => onSave([{ type: "SWIM MEET" }])}
+            className="w-full text-sm text-center p-1 text-orange-600 bg-orange-100 hover:bg-orange-200 rounded"
+          >
+            Swim Meet
+          </button>
+          <button
             onClick={() => onSave([{ type: "OFF" }])}
             className="w-full text-sm text-center p-1 text-red-600 bg-red-100 hover:bg-red-200 rounded"
           >
-            Set as OFF
+            OFF
           </button>
         </div>
         <button
@@ -399,7 +408,7 @@ const WorkerDetailModal = ({
               {worker.isMinor ? "Minor" : "Adult"}
             </p>
           )}
-          <div className="mt-6 space-y-3 text-sm">
+          <div className="mt-6 space-y-3 text-xs">
             <div className="flex justify-between">
               <span className="font-semibold text-gray-600">Position:</span>
               <span className="text-gray-800">{worker.title}</span>
@@ -509,6 +518,8 @@ const WorkerRow = ({
   const shouldShowShiftType = (shift, worker) => {
     if (!shift || !worker || !shift.type || !worker.title) return false;
     if (shift.type === "LESSONS") return true;
+    if (shift.type === "CAMP") return true; // Always show for CAMP
+    if (shift.type === "SWIM MEET") return true; // Always show for SWIM MEET
     if (worker.title.includes("Lifeguard") && shift.type === "GUARD")
       return false;
     if (worker.title.includes("Front") && shift.type === "FRONT") return false;
@@ -542,7 +553,7 @@ const WorkerRow = ({
     >
       {isManager && (
         <td
-          className={`p-1 border text-center cursor-pointer transition-colors duration-100 ${getCellClass(
+          className={`cell-padding border text-center cursor-pointer transition-colors duration-100 ${getCellClass(
             "name"
           )}`}
           onClick={() => onToggleSelect(worker.uid)}
@@ -558,24 +569,29 @@ const WorkerRow = ({
         </td>
       )}
       <td
-        className={`p-1 border font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto transition-colors duration-100 cursor-pointer ${getCellClass(
+        className={`cell-padding !pl-1 border text-sm font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto transition-colors duration-100 cursor-pointer ${getCellClass(
           "name"
         )}`}
         onClick={() => onWorkerClick(worker)}
         onMouseEnter={() => handleMouseEnter(worker.uid, "name")}
       >
-        {worker.fullName || worker.email}
+        {worker.fullName
+          ? (() => {
+              const parts = worker.fullName.trim().split(" ");
+              if (parts.length > 1) {
+                const first = parts[0];
+                const last = parts.slice(1).join(" ");
+                return `${last}, ${first}`;
+              }
+              return worker.fullName;
+            })()
+          : worker.email}
         {worker.isMinor && (
           <span className="text-gray-500 font-medium ml-1">(M)</span>
         )}
-        {/* {worker.title &&
-          worker.title !== "Lifeguard" &&
-          worker.title !== "Front Worker" && (
-            <div className="text-xs text-gray-500">{worker.title}</div>
-          )} */}
       </td>
       <td
-        className={`p-1 border text-center transition-colors duration-100 ${getCellClass(
+        className={`cell-padding border text-center transition-colors duration-100 ${getCellClass(
           "yos"
         )}`}
         onMouseEnter={() => handleMouseEnter(worker.uid, "yos")}
@@ -593,7 +609,7 @@ const WorkerRow = ({
         return (
           <td
             key={day}
-            className={`p-1 border text-center transition-colors duration-100 ${
+            className={`cell-padding border text-center transition-colors duration-100 ${
               isManager ? "cursor-pointer" : ""
             } ${getCellClass(day)}`}
             onMouseEnter={() => handleMouseEnter(worker.uid, day)}
@@ -601,7 +617,7 @@ const WorkerRow = ({
           >
             {isRevealed ? (
               dailyTotalHours > 0 ? (
-                <div className="font-semibold text-blue-600 h-full flex items-center justify-center">
+                <div className="font-semibold text-sm text-blue-600 h-full flex items-center justify-center">
                   {dailyTotalHours.toFixed(2)}
                 </div>
               ) : (
@@ -609,8 +625,12 @@ const WorkerRow = ({
               )
             ) : Array.isArray(dayShifts) ? (
               dayShifts[0]?.type === "OFF" ? (
-                <div className="text-sm text-red-500 h-full flex items-center justify-center">
+                <div className="text-xs text-red-500 h-full flex items-center justify-center">
                   OFF
+                </div>
+              ) : dayShifts[0]?.type === "SWIM MEET" ? (
+                <div className="text-xs text-orange-400 h-full flex items-center justify-center">
+                  SWIM MEET
                 </div>
               ) : (
                 <div>
@@ -621,7 +641,7 @@ const WorkerRow = ({
                     .map((shift, index) => (
                       <div
                         key={index}
-                        className={`text-sm rounded-md p-0.5 flex items-center gap-1 justify-center text-nowrap ${getShiftHighlightClass(
+                        className={`text-xs rounded-md p-0.5 flex items-center gap-1 justify-center text-nowrap ${getShiftHighlightClass(
                           shift
                         )}`}
                       >
@@ -629,7 +649,13 @@ const WorkerRow = ({
                           shift.start
                         )} - ${formatTime12hr(shift.end)}`}</div>
                         {shouldShowShiftType(shift, worker) && (
-                          <div className="text-gray-500">({shift.type[0]})</div>
+                          <div className="text-gray-500 text-xs">
+                            {shift.type === "CAMP"
+                              ? "(CAMP)"
+                              : shift.type === "LESSONS"
+                              ? "(L)"
+                              : `(${shift.type[0]})`}
+                          </div>
                         )}
                       </div>
                     ))}
@@ -642,7 +668,7 @@ const WorkerRow = ({
         );
       })}
       <td
-        className={`p-1 border ${
+        className={`cell-padding border text-sm ${
           weeklyTotal > 40 && "text-red-500 bg-red-50 border-black"
         } text-center font-medium transition-colors duration-100 cursor-pointer ${getCellClass(
           "total"
@@ -705,6 +731,7 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
         <option>MANAGER</option>
         <option>FRONT</option>
         <option>LESSONS</option>
+        <option>CAMP</option>
       </select>
       <div className="flex items-center gap-1">
         {applicablePresets.map((p) => (
@@ -806,7 +833,19 @@ const ScheduleView = ({
       const orderA = titleOrder[titleA.toLowerCase()] || 99;
       const orderB = titleOrder[titleB.toLowerCase()] || 99;
       if (orderA !== orderB) return orderA - orderB;
-      return (b.yos || 0) - (a.yos || 0);
+      if ((b.yos || 0) !== (a.yos || 0)) return (b.yos || 0) - (a.yos || 0);
+
+      // Sort by last name (first letter of second word in fullName)
+      const getLastNameFirstLetter = (worker) => {
+        if (!worker.fullName) return "";
+        const parts = worker.fullName.trim().split(" ");
+        return parts.length > 1 ? parts[1][0].toLowerCase() : "";
+      };
+      const lastA = getLastNameFirstLetter(a);
+      const lastB = getLastNameFirstLetter(b);
+      if (lastA < lastB) return -1;
+      if (lastA > lastB) return 1;
+      return 0;
     };
     const allWorkers = [...workers];
     allWorkers.sort(sortLogic);
@@ -1227,7 +1266,7 @@ const ScheduleView = ({
     return (
       <tr className="bg-gray-100">
         {isManager && (
-          <th className="p-2 border text-center">
+          <th className="header-cell-padding border text-center">
             <input
               type="checkbox"
               className="rounded"
@@ -1244,13 +1283,13 @@ const ScheduleView = ({
           </th>
         )}
         <th
-          className={`p-2 border text-left text-sm font-semibold text-gray-600 min-w-[150px] max-w-[250px] bg-gray-100`}
+          className={`header-cell-padding border text-left text-xs font-semibold text-gray-600 min-w-[150px] max-w-[250px] bg-gray-100`}
           onMouseEnter={() => handleHeaderMouseEnter("name")}
         >
           Worker
         </th>
         <th
-          className={`p-2 border text-sm font-semibold text-gray-600 transition-colors duration-100 ${
+          className={`header-cell-padding border text-xs font-semibold text-gray-600 transition-colors duration-100 ${
             hoveredCell.col === "yos" ? "bg-blue-100" : "bg-gray-100"
           }`}
           onMouseEnter={() => handleHeaderMouseEnter("yos")}
@@ -1260,7 +1299,7 @@ const ScheduleView = ({
         {days.map((dayKey, i) => (
           <th
             key={dayKey}
-            className={`p-2 border text-sm font-semibold text-gray-600 transition-colors duration-100 ${
+            className={`header-cell-padding border text-xs font-semibold text-gray-600 transition-colors duration-100 ${
               hoveredCell.col === dayKey ? "bg-blue-100" : "bg-gray-100"
             }`}
             onMouseEnter={() => handleHeaderMouseEnter(dayKey)}
@@ -1279,7 +1318,7 @@ const ScheduleView = ({
           </th>
         ))}
         <th
-          className={`p-2 border text-sm font-semibold text-gray-600 transition-colors duration-100 ${
+          className={`header-cell-padding border text-xs font-semibold text-gray-600 transition-colors duration-100 ${
             hoveredCell.col === "total" ? "bg-blue-100" : "bg-gray-100"
           }`}
           onMouseEnter={() => handleHeaderMouseEnter("total")}
@@ -1303,6 +1342,7 @@ const ScheduleView = ({
     const shouldShowShiftType = (shift, worker) => {
       if (!shift || !worker || !shift.type || !worker.title) return false;
       if (shift.type === "LESSONS") return true;
+      if (shift.type === "CAMP") return true;
       if (worker.title.includes("Lifeguard") && shift.type === "GUARD")
         return false;
       if (worker.title.includes("Front") && shift.type === "FRONT")
@@ -1331,6 +1371,9 @@ const ScheduleView = ({
                     if (Array.isArray(dayShifts)) {
                       if (dayShifts[0]?.type === "OFF") {
                         cellContent = '<div style="color: #ef4444;">OFF</div>';
+                      } else if (dayShifts[0]?.type === "SWIM MEET") {
+                        cellContent =
+                          '<div style="color: #ff8904;">SWIM MEET</div>';
                       } else {
                         cellContent = dayShifts
                           .map(
@@ -1341,7 +1384,13 @@ const ScheduleView = ({
                                     )} - ${formatTime12hr(shift.end)}
                                     ${
                                       shouldShowShiftType(shift, worker)
-                                        ? `<span style="color: #6b7280;"> (${shift.type[0]})</span>`
+                                        ? `<span style="color: #6b7280;"> (${
+                                            shift.type === "CAMP"
+                                              ? "CAMP"
+                                              : shift.type === "LESSONS"
+                                              ? "L"
+                                              : shift.type[0]
+                                          })</span>`
                                         : ""
                                     }
                                 </div>
@@ -1692,7 +1741,7 @@ const ScheduleView = ({
                     )}
                     <td
                       colSpan={isManager ? 10 : 9}
-                      className={`p-2 border text-left text-sm font-semibold text-gray-600`}
+                      className={`p-2 border text-left text-xs font-semibold text-gray-600`}
                     >
                       Front Workers
                     </td>
@@ -1852,6 +1901,12 @@ const BulkActionsBar = ({
               className="px-3 h-7 text-sm rounded-md bg-white text-red-500 hover:bg-red-100"
             >
               Set as OFF
+            </button>
+            <button
+              onClick={() => handleBulkUpdate([{ type: "SWIM MEET" }])}
+              className="px-3 h-7 text-sm rounded-md bg-white text-orange-600 hover:bg-orange-100"
+            >
+              Set as SWIM MEET
             </button>
             <button
               onClick={() => handleBulkUpdate(null)}

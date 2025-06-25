@@ -25,3 +25,11 @@ button {
     scrollbar-width: none;
   }
 }
+
+.cell-padding {
+  padding: 2px;
+}
+
+.header-cell-padding {
+  padding: 4px;
+}

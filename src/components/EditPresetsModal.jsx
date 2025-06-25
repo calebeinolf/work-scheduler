@@ -10,7 +10,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
   const [error, setError] = useState("");
   const [justMovedId, setJustMovedId] = useState(null); // For visual feedback
   const scrollContainerRef = useRef(null); // For auto-scrolling
-  const shiftTypes = ["GUARD", "MANAGER", "FRONT", "LESSONS"];
+  const shiftTypes = ["GUARD", "MANAGER", "FRONT", "LESSONS", "CAMP"];
 
   useEffect(() => {
     if (!isOpen || !companyId) return;

@@ -1246,21 +1246,29 @@ const ScheduleView = ({
 
     if (forPrint) {
       return `
-            <tr style="background-color: #f3f4f6;">
-                <th style="padding: 3px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600; color: #4b5563; min-width: 150px;">Worker</th>
-                <th style="padding: 3px; border: 1px solid #e5e7eb;; font-weight: 600; color: #4b5563;">YOS</th>
-                ${days
-                  .map(
-                    (dayKey, i) => `
-                    <th style="padding: 3px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; color: #4b5563;">
-                        <div>${headerDates[i]}</div>
-                    </th>
-                `
-                  )
-                  .join("")}
-                <th style="padding: 3px; border: 1px solid #e5e7eb; font-weight: 600; color: #4b5563;">Hours</th>
-            </tr>
-        `;
+        <tr style="background-color: #f3f4f6;">
+          <th style="padding: 3px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600; color: #4b5563; min-width: 150px;">Worker</th>
+          <th style="padding: 3px; border: 1px solid #e5e7eb;; font-weight: 600; color: #4b5563;">YOS</th>
+          ${days
+            .map(
+              (dayKey, i) => `
+            <th style="padding: 3px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; color: #4b5563;">
+              <div>${headerDates[i]}</div>
+              <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 2px;">
+                <span >
+                ${dailyStaffCounts[dayKey]?.GUARD || "0"} G
+                </span>
+                <span >
+                ${dailyStaffCounts[dayKey]?.FRONT || "0"} F
+                </span>
+              </div>
+            </th>
+          `
+            )
+            .join("")}
+          <th style="padding: 3px; border: 1px solid #e5e7eb; font-weight: 600; color: #4b5563;">Hours</th>
+        </tr>
+      `;
     }
 
     return (

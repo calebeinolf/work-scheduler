@@ -4,29 +4,14 @@ import React, { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
-const isMinorCheck = (dobString) => {
-  if (!dobString) return false;
-  const today = new Date();
-  const birthDate = new Date(dobString);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDifference = today.getMonth() - birthDate.getMonth();
-  if (
-    monthDifference < 0 ||
-    (monthDifference === 0 && today.getDate() < birthDate.getDate())
-  ) {
-    age--;
-  }
-  return age < 18;
-};
-
 const EditWorkerModal = ({ worker, isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     fullName: "",
     yos: "",
-    dob: "",
     email: "",
     phone: "",
     title: "Lifeguard",
+    isMinor: false,
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,17 +22,20 @@ const EditWorkerModal = ({ worker, isOpen, onClose }) => {
       setFormData({
         fullName: worker.fullName || "",
         yos: worker.yos || "",
-        dob: worker.dob || "",
         email: worker.email || "",
         phone: worker.phone || "",
         title: worker.title || "Lifeguard",
+        isMinor: !!worker.isMinor,
       });
     }
   }, [worker]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -60,7 +48,6 @@ const EditWorkerModal = ({ worker, isOpen, onClose }) => {
       const updates = {
         ...formData,
         yos: parseInt(formData.yos, 10),
-        isMinor: isMinorCheck(formData.dob),
       };
 
       // If the email is changed on a claimed profile, unlink it.
@@ -194,22 +181,21 @@ const EditWorkerModal = ({ worker, isOpen, onClose }) => {
                   min="0"
                 />
               </div>
-              <div>
-                <label
-                  htmlFor="dob"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Date of Birth
-                </label>
+              <div className="flex items-center mt-2">
                 <input
-                  type="date"
-                  id="dob"
-                  name="dob"
-                  value={formData.dob}
+                  id="isMinor"
+                  name="isMinor"
+                  type="checkbox"
+                  checked={formData.isMinor}
                   onChange={handleChange}
-                  required
-                  className="w-full p-2 border rounded"
+                  className="mr-2"
                 />
+                <label
+                  htmlFor="isMinor"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Is Minor
+                </label>
               </div>
             </div>
           </div>

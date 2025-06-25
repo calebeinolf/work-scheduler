@@ -4,28 +4,13 @@ import React, { useState } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
-const isMinorCheck = (dobString) => {
-  if (!dobString) return false;
-  const today = new Date();
-  const birthDate = new Date(dobString);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDifference = today.getMonth() - birthDate.getMonth();
-  if (
-    monthDifference < 0 ||
-    (monthDifference === 0 && today.getDate() < birthDate.getDate())
-  ) {
-    age--;
-  }
-  return age < 18;
-};
-
 const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
   const [fullName, setFullName] = useState("");
   const [yos, setYos] = useState("");
-  const [dob, setDob] = useState("");
   const [email, setEmail] = useState(""); // Email is required for matching
   const [phone, setPhone] = useState("");
   const [title, setTitle] = useState("Lifeguard");
+  const [isMinor, setIsMinor] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -43,8 +28,7 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
         email: email, // The key field for matching
         fullName: fullName,
         yos: parseInt(yos, 10),
-        dob: dob,
-        isMinor: isMinorCheck(dob),
+        isMinor: isMinor,
         title: title,
         phone: phone, // Optional phone field
       });
@@ -60,9 +44,9 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
   const handleClose = () => {
     setFullName("");
     setYos("");
-    setDob("");
     setEmail("");
     setTitle("Lifeguard");
+    setIsMinor(false);
     setError("");
     onClose();
   };
@@ -174,21 +158,20 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
                   min="0"
                 />
               </div>
-              <div>
-                <label
-                  htmlFor="dob"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Date of Birth
-                </label>
+              <div className="flex items-center mt-2">
                 <input
-                  type="date"
-                  id="dob"
-                  value={dob}
-                  onChange={(e) => setDob(e.target.value)}
-                  required
-                  className="w-full p-2 border rounded"
+                  id="isMinor"
+                  type="checkbox"
+                  checked={isMinor}
+                  onChange={(e) => setIsMinor(e.target.checked)}
+                  className="mr-2"
                 />
+                <label
+                  htmlFor="isMinor"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Is Minor
+                </label>
               </div>
             </div>
           </div>

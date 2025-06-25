@@ -229,13 +229,25 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
+  // Add keyboard handler for Enter to save
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  });
+
   return (
     <div
       ref={popoverRef}
       className="absolute z-50 bg-white rounded-lg shadow-2xl border p-3 w-80"
       style={getPopoverStyle()}
     >
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
           {shifts.map((shift, index) => {
             const applicablePresets = presets.filter((p) =>
@@ -322,28 +334,28 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
         </div>
         <button
           onClick={addShift}
-          className="w-full text-sm p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded"
+          className="w-full text-sm p-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded"
         >
-          + Add Shift Time
+          + Add Another Shift
         </button>
         <hr />
         <div className="flex space-x-2">
           <button
             onClick={() => onSave(null)}
-            className="w-full text-sm text-center p-2 text-gray-700 bg-gray-200 hover:bg-gray-200 rounded"
+            className="w-full text-sm text-center p-1 text-gray-700 bg-gray-200 hover:bg-gray-200 rounded"
           >
             Reset
           </button>
           <button
             onClick={() => onSave([{ type: "OFF" }])}
-            className="w-full text-sm text-center p-2 text-red-600 bg-red-100 hover:bg-red-200 rounded"
+            className="w-full text-sm text-center p-1 text-red-600 bg-red-100 hover:bg-red-200 rounded"
           >
             Set as OFF
           </button>
         </div>
         <button
           onClick={handleSave}
-          className="w-full text-sm p-2 bg-blue-500 text-white rounded"
+          className="w-full text-sm p-1 bg-blue-500 text-white rounded"
         >
           Save All Changes
         </button>
@@ -556,11 +568,11 @@ const WorkerRow = ({
         {worker.isMinor && (
           <span className="text-gray-500 font-medium ml-1">(M)</span>
         )}
-        {worker.title &&
+        {/* {worker.title &&
           worker.title !== "Lifeguard" &&
           worker.title !== "Front Worker" && (
             <div className="text-xs text-gray-500">{worker.title}</div>
-          )}
+          )} */}
       </td>
       <td
         className={`p-1 border text-center transition-colors duration-100 ${getCellClass(
@@ -959,7 +971,7 @@ const ScheduleView = ({
 
     pushNewState(newScheduleData);
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-    await updateDoc(scheduleDocRef, { shifts: newScheduleData });
+    await setDoc(scheduleDocRef, { shifts: newScheduleData }, { merge: true });
     setSelectedWorkers([]);
   };
 
@@ -1005,7 +1017,7 @@ const ScheduleView = ({
 
     pushNewState(newScheduleData);
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-    await updateDoc(scheduleDocRef, { shifts: newScheduleData });
+    await setDoc(scheduleDocRef, { shifts: newScheduleData }, { merge: true });
     handleClosePopover();
   };
 
@@ -1090,7 +1102,7 @@ const ScheduleView = ({
     setHistoryIndex(newIndex);
     const prevState = history[newIndex];
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-    await updateDoc(scheduleDocRef, { shifts: prevState });
+    await setDoc(scheduleDocRef, { shifts: prevState }, { merge: true });
   };
 
   const handleRedo = async () => {
@@ -1100,7 +1112,7 @@ const ScheduleView = ({
     setHistoryIndex(newIndex);
     const nextState = history[newIndex];
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-    await updateDoc(scheduleDocRef, { shifts: nextState });
+    await setDoc(scheduleDocRef, { shifts: nextState }, { merge: true });
   };
 
   // Keyboard shortcuts for undo/redo
@@ -1196,18 +1208,18 @@ const ScheduleView = ({
     if (forPrint) {
       return `
             <tr style="background-color: #f3f4f6;">
-                <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-size: 14px; font-weight: 600; color: #4b5563; min-width: 150px;">Worker</th>
-                <th style="padding: 8px; border: 1px solid #e5e7eb; font-size: 14px; font-weight: 600; color: #4b5563;">YOS</th>
+                <th style="padding: 3px; border: 1px solid #e5e7eb; text-align: left; font-weight: 600; color: #4b5563; min-width: 150px;">Worker</th>
+                <th style="padding: 3px; border: 1px solid #e5e7eb;; font-weight: 600; color: #4b5563;">YOS</th>
                 ${days
                   .map(
                     (dayKey, i) => `
-                    <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; font-size: 14px; font-weight: 600; color: #4b5563;">
+                    <th style="padding: 3px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; color: #4b5563;">
                         <div>${headerDates[i]}</div>
                     </th>
                 `
                   )
                   .join("")}
-                <th style="padding: 8px; border: 1px solid #e5e7eb; font-size: 14px; font-weight: 600; color: #4b5563;">Hours</th>
+                <th style="padding: 3px; border: 1px solid #e5e7eb; font-weight: 600; color: #4b5563;">Hours</th>
             </tr>
         `;
     }
@@ -1300,22 +1312,16 @@ const ScheduleView = ({
 
     return `
             <tr>
-                <td style="padding: 4px; border: 1px solid #e5e7eb; font-weight: 500;">
+                <td style="padding: 2px; padding-left: 3px; border: 1px solid #e5e7eb; font-weight: 500; text-align: left;">
                     ${worker.fullName || worker.email}
                     ${
                       worker.isMinor
                         ? '<span style="color: #6b7280; font-weight: 500; margin-left: 4px;">(M)</span>'
                         : ""
                     }
-                    ${
-                      worker.title &&
-                      worker.title !== "Lifeguard" &&
-                      worker.title !== "Front Worker"
-                        ? `<div style="font-size: 12px; color: #6b7280;">${worker.title}</div>`
-                        : ""
-                    }
+                    
                 </td>
-                <td style="padding: 4px; border: 1px solid #e5e7eb; text-align: center;">${
+                <td style="padding: 2px; border: 1px solid #e5e7eb; text-align: center;">${
                   worker.yos ?? 0
                 }</td>
                 ${["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
@@ -1329,7 +1335,7 @@ const ScheduleView = ({
                         cellContent = dayShifts
                           .map(
                             (shift) => `
-                                <div style="font-size: 12px;">
+                                <div style="font-size: 10px;">
                                     ${formatTime12hr(
                                       shift.start
                                     )} - ${formatTime12hr(shift.end)}
@@ -1344,10 +1350,10 @@ const ScheduleView = ({
                           .join("");
                       }
                     }
-                    return `<td style="padding: 4px; border: 1px solid #e5e7eb; text-align: center;">${cellContent}</td>`;
+                    return `<td style="padding: 2px; border: 1px solid #e5e7eb; text-align: center;">${cellContent}</td>`;
                   })
                   .join("")}
-                <td style="padding: 4px; border: 1px solid #e5e7eb; text-align: center; font-weight: 500;">${weeklyTotal.toFixed(
+                <td style="padding: 2px; border: 1px solid #e5e7eb; text-align: center; font-weight: 500;">${weeklyTotal.toFixed(
                   2
                 )}</td>
             </tr>
@@ -1361,57 +1367,58 @@ const ScheduleView = ({
     const printWindow = window.open("", "_blank", "height=600,width=800");
     let htmlContent = `
       <html>
-        <head>
-          <title>Print Schedule</title>
-          <style>
-            @media print {
-                @page { size: landscape; }
-            }
-            body { font-family: sans-serif; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-            th { background-color: #f2f2f2; }
-            h1, h2 { text-align: center; }
-            .section-header { 
-              font-size: 12px; 
-              color: #6b7280
-              font-weight: bold; 
-              padding: 12px 8px; 
-              background-color: #f3f4f6; 
-              border-bottom: 1px solid #e5e7eb;
-            }
-          </style>
-        </head>
-        <body>
-          <h1>Schedule for ${formatWeekRange(
-            weekStartDate,
-            weekEndDateForPrint
-          )}</h1>
-          <table>
-            <thead>
-              ${renderWeekHeader(true)}
-            </thead>
-            <tbody>
-              ${sortedManagersAndGuards
-                .map((worker) => renderWorkerRowForPrint(worker))
-                .join("")}
-            </tbody>
-            ${
-              sortedFrontWorkers.length > 0
-                ? `
-              <tbody>
-                <tr><td colspan="10" class="section-header">Front Workers</td></tr>
-              </tbody>
-              <tbody>
-                ${sortedFrontWorkers
-                  .map((worker) => renderWorkerRowForPrint(worker))
-                  .join("")}
-              </tbody>
-            `
-                : ""
-            }
-          </table>
-        </body>
+      <head>
+        <title>Print Schedule</title>
+        <style>
+        @media print {
+          @page { size: landscape; }
+        }
+        body { font-family: sans-serif; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 10px; }
+        th { background-color: #f2f2f2; }
+        h1, h2 { text-align: center; }
+        .section-header { 
+          font-size: 10px; 
+          color: #6b7280;
+          font-weight: bold; 
+          padding: 3px; 
+          background-color: #f3f4f6; 
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
+        }
+        </style>
+      </head>
+      <body>
+        <p style="text-align:center; font-weight: bold; margin: 0; margin-bottom: 4px">Schedule for ${formatWeekRange(
+          weekStartDate,
+          weekEndDateForPrint
+        )}</p>
+        <table>
+        <thead>
+          ${renderWeekHeader(true)}
+        </thead>
+        <tbody>
+          ${sortedManagersAndGuards
+            .map((worker) => renderWorkerRowForPrint(worker))
+            .join("")}
+        </tbody>
+        ${
+          sortedFrontWorkers.length > 0
+            ? `
+          <tbody>
+          <tr><td colspan="10" class="section-header">Front Workers</td></tr>
+          </tbody>
+          <tbody>
+          ${sortedFrontWorkers
+            .map((worker) => renderWorkerRowForPrint(worker))
+            .join("")}
+          </tbody>
+        `
+            : ""
+        }
+        </table>
+      </body>
       </html>
     `;
     printWindow.document.open();

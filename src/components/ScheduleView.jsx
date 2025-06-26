@@ -31,6 +31,15 @@ import {
   EllipsisVertical,
 } from "lucide-react";
 
+// --- Define column widths for the table ---
+const columnWidths = {
+  checkbox: "25px",
+  workerName: "150px",
+  yos: "35px",
+  day: "100px",
+  total: "50px",
+};
+
 // --- Deep object comparison helper ---
 function deepEqual(objA, objB) {
   if (objA === objB) return true;
@@ -552,6 +561,10 @@ const WorkerRow = ({
     >
       {isManager && (
         <td
+          style={{
+            width: columnWidths.checkbox,
+            minWidth: columnWidths.checkbox,
+          }}
           className={`cell-padding border text-center cursor-pointer transition-colors duration-100 ${getCellClass(
             "name"
           )}`}
@@ -568,7 +581,11 @@ const WorkerRow = ({
         </td>
       )}
       <td
-        className={`cell-padding !pl-1 border text-sm font-medium min-w-[150px] max-w-[180px] no-scrollbar overflow-auto transition-colors duration-100 cursor-pointer ${getCellClass(
+        style={{
+          width: columnWidths.workerName,
+          minWidth: columnWidths.workerName,
+        }}
+        className={`cell-padding !pl-1 border text-sm font-medium no-scrollbar overflow-auto transition-colors duration-100 cursor-pointer ${getCellClass(
           "name"
         )}`}
         onClick={() => onWorkerClick(worker)}
@@ -590,6 +607,7 @@ const WorkerRow = ({
         )}
       </td>
       <td
+        style={{ width: columnWidths.yos, minWidth: columnWidths.yos }}
         className={`cell-padding border text-center transition-colors duration-100 ${getCellClass(
           "yos"
         )}`}
@@ -608,6 +626,7 @@ const WorkerRow = ({
         return (
           <td
             key={day}
+            style={{ width: columnWidths.day, minWidth: columnWidths.day }}
             className={`cell-padding border text-center transition-colors duration-100 ${
               isManager ? "cursor-pointer" : ""
             } ${getCellClass(day)}`}
@@ -650,7 +669,7 @@ const WorkerRow = ({
                         {shouldShowShiftType(shift, worker) && (
                           <div className="text-gray-500 text-xs">
                             {shift.type === "CAMP"
-                              ? "(CAMP)"
+                              ? "(C)"
                               : shift.type === "LESSONS"
                               ? "(L)"
                               : `(${shift.type[0]})`}
@@ -667,6 +686,7 @@ const WorkerRow = ({
         );
       })}
       <td
+        style={{ width: columnWidths.total, minWidth: columnWidths.total }}
         className={`cell-padding border text-sm ${
           weeklyTotal > 40 && "text-red-500 bg-red-50 border-black"
         } text-center font-medium transition-colors duration-100 cursor-pointer ${getCellClass(
@@ -1273,7 +1293,13 @@ const ScheduleView = ({
     return (
       <tr className="bg-gray-100">
         {isManager && (
-          <th className="header-cell-padding border text-center">
+          <th
+            style={{
+              width: columnWidths.checkbox,
+              minWidth: columnWidths.checkbox,
+            }}
+            className="header-cell-padding border text-center"
+          >
             <input
               type="checkbox"
               className="rounded"
@@ -1290,12 +1316,17 @@ const ScheduleView = ({
           </th>
         )}
         <th
-          className={`header-cell-padding border text-left text-xs font-semibold text-gray-600 min-w-[150px] max-w-[250px] bg-gray-100`}
+          style={{
+            width: columnWidths.workerName,
+            minWidth: columnWidths.workerName,
+          }}
+          className={`header-cell-padding border text-left text-xs font-semibold text-gray-600 bg-gray-100`}
           onMouseEnter={() => handleHeaderMouseEnter("name")}
         >
           Worker
         </th>
         <th
+          style={{ width: columnWidths.yos, minWidth: columnWidths.yos }}
           className={`header-cell-padding border text-xs font-semibold text-gray-600 transition-colors duration-100 ${
             hoveredCell.col === "yos" ? "bg-blue-100" : "bg-gray-100"
           }`}
@@ -1306,6 +1337,7 @@ const ScheduleView = ({
         {days.map((dayKey, i) => (
           <th
             key={dayKey}
+            style={{ width: columnWidths.day, minWidth: columnWidths.day }}
             className={`header-cell-padding border text-xs font-semibold text-gray-600 transition-colors duration-100 ${
               hoveredCell.col === dayKey ? "bg-blue-100" : "bg-gray-100"
             }`}
@@ -1325,6 +1357,7 @@ const ScheduleView = ({
           </th>
         ))}
         <th
+          style={{ width: columnWidths.total, minWidth: columnWidths.total }}
           className={`header-cell-padding border text-xs font-semibold text-gray-600 transition-colors duration-100 ${
             hoveredCell.col === "total" ? "bg-blue-100" : "bg-gray-100"
           }`}
@@ -1518,6 +1551,7 @@ const ScheduleView = ({
   };
 
   // --- START: Dual Scrollbar Logic ---
+  const headerContainerRef = useRef(null);
   const mainContentRef = useRef(null);
   const topScrollbarRef = useRef(null);
   const isSyncingRef = useRef(false);
@@ -1526,8 +1560,10 @@ const ScheduleView = ({
   useEffect(() => {
     const mainContentEl = mainContentRef.current;
     const topScrollbarEl = topScrollbarRef.current;
+    const headerContainerEl = headerContainerRef.current;
 
-    if (!mainContentEl || !topScrollbarEl || loading) return;
+    if (!mainContentEl || !topScrollbarEl || !headerContainerEl || loading)
+      return;
 
     const topScrollbarContent = topScrollbarEl.querySelector("div");
 
@@ -1548,6 +1584,7 @@ const ScheduleView = ({
       if (isSyncingRef.current) return;
       isSyncingRef.current = true;
       topScrollbarEl.scrollLeft = mainContentEl.scrollLeft;
+      headerContainerEl.scrollLeft = mainContentEl.scrollLeft;
       isSyncingRef.current = false;
     };
 
@@ -1555,6 +1592,7 @@ const ScheduleView = ({
       if (isSyncingRef.current) return;
       isSyncingRef.current = true;
       mainContentEl.scrollLeft = topScrollbarEl.scrollLeft;
+      headerContainerEl.scrollLeft = topScrollbarEl.scrollLeft;
       isSyncingRef.current = false;
     };
 
@@ -1565,15 +1603,23 @@ const ScheduleView = ({
     resizeObserver.observe(mainContentEl);
 
     return () => {
-      mainContentEl.removeEventListener("scroll", handleMainScroll);
-      topScrollbarEl.removeEventListener("scroll", handleTopScroll);
-      resizeObserver.unobserve(mainContentEl);
+      if (mainContentEl) {
+        mainContentEl.removeEventListener("scroll", handleMainScroll);
+        resizeObserver.unobserve(mainContentEl);
+      }
+      if (topScrollbarEl) {
+        topScrollbarEl.removeEventListener("scroll", handleTopScroll);
+      }
     };
   }, [scheduleData, workers, loading]); // Rerun when data or loading state changes
   // --- END: Dual Scrollbar Logic ---
 
   return (
     <div className="pb-24">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
       {isManager && (
         <FloatingPresetChip preset={activePreset} position={cursorPos} />
       )}
@@ -1599,7 +1645,6 @@ const ScheduleView = ({
           onClose={handleClosePopover}
         />
       )}
-
       {/* Date & Arrows */}
       <div className="max-w-6xl mx-auto flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
@@ -1644,7 +1689,6 @@ const ScheduleView = ({
           </button>
         </div>
       </div>
-
       {/* Bulk Actions Bar */}
       {isManager && (
         <BulkActionsBar
@@ -1663,7 +1707,6 @@ const ScheduleView = ({
           onPublishChanges={handlePublishChanges}
         />
       )}
-
       {/* No Schedule Published Message */}
       {!isManager && !loading && !isPublished && (
         <div className="text-center p-8 bg-gray-50 rounded-lg">
@@ -1672,7 +1715,18 @@ const ScheduleView = ({
           </p>
         </div>
       )}
-
+      {/* Week Header */}
+      <div
+        ref={headerContainerRef}
+        className="overflow-x-auto no-scrollbar sticky top-0 z-10 shadow-md"
+      >
+        <table
+          className="w-full border-collapse border"
+          style={{ tableLayout: "fixed" }}
+        >
+          <thead>{renderWeekHeader()}</thead>
+        </table>
+      </div>
       {/* Top Scrollbar */}
       <div
         ref={topScrollbarRef}
@@ -1684,22 +1738,21 @@ const ScheduleView = ({
       >
         <div style={{ height: "1px" }}></div>
       </div>
-
       {/* Schedule Table */}
       {((isManager && !loading) || (!isManager && isPublished)) && (
         <div className="overflow-x-auto" ref={mainContentRef}>
           <table
             ref={tableRef}
             className="w-full border-collapse border"
+            style={{ tableLayout: "fixed" }}
             onMouseLeave={() => {
-              if (!popoverTarget) setHoveredCell({ row: null, col: null });
+              setHoveredCell({ row: null, col: null });
             }}
           >
-            <thead>{renderWeekHeader()}</thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="text-center p-4">
+                  <td colSpan={11} className="text-center p-4">
                     Loading schedule...
                   </td>
                 </tr>
@@ -1730,7 +1783,13 @@ const ScheduleView = ({
                 <tbody>
                   <tr className="bg-gray-100 text-center">
                     {isManager && (
-                      <td className="p-2">
+                      <td
+                        style={{
+                          width: columnWidths.checkbox,
+                          minWidth: columnWidths.checkbox,
+                        }}
+                        className="p-2 border"
+                      >
                         <input
                           type="checkbox"
                           className="rounded"
@@ -1780,6 +1839,25 @@ const ScheduleView = ({
           </table>
         </div>
       )}
+
+      {/* Key */}
+      <div className="w-full mt-8 mb-2 flex flex-wrap gap-4 items-center justify-center text-xs text-gray-600">
+        <span>
+          <span className="font-semibold text-gray-800">Shifts Key:</span>
+        </span>
+        <span>
+          <span className="font-semibold text-gray-800">(M)</span> Manager
+        </span>
+        <span>
+          <span className="font-semibold text-gray-800">(G)</span> Guard
+        </span>
+        <span>
+          <span className="font-semibold text-gray-800">(L)</span> Lessons
+        </span>
+        <span>
+          <span className="font-semibold text-gray-800">(C)</span> Camp
+        </span>
+      </div>
 
       {/* Floating Easy Add Toolbar */}
       {isManager && (

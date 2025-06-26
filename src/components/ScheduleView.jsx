@@ -84,6 +84,9 @@ const formatTime12hr = (time24) => {
   const [hours, minutes] = time24.split(":");
   const h = parseInt(hours, 10);
   const newHours = h % 12 === 0 ? 12 : h % 12;
+  if (minutes === "00") {
+    return `${newHours}`;
+  }
   return `${newHours}:${minutes}`;
 };
 
@@ -550,6 +553,13 @@ const WorkerRow = ({
 
   const isCurrentUserWorker = currentUserId === worker.uid;
 
+  // Helper to format hours as requested
+  const formatHours = (num) => {
+    if (num % 1 === 0) return num.toString();
+    if ((num * 10) % 1 === 0) return num.toFixed(1);
+    return num.toFixed(2).replace(/\.?0+$/, "");
+  };
+
   return (
     <tr
       key={worker.uid}
@@ -636,7 +646,7 @@ const WorkerRow = ({
             {isRevealed ? (
               dailyTotalHours > 0 ? (
                 <div className="font-semibold text-sm text-blue-600 h-full flex items-center justify-center">
-                  {dailyTotalHours.toFixed(2)}
+                  {formatHours(dailyTotalHours)}
                 </div>
               ) : (
                 <span className="text-gray-400">0</span>
@@ -663,9 +673,9 @@ const WorkerRow = ({
                           shift
                         )}`}
                       >
-                        <div>{`${formatTime12hr(
-                          shift.start
-                        )} - ${formatTime12hr(shift.end)}`}</div>
+                        <div>{`${formatTime12hr(shift.start)}-${formatTime12hr(
+                          shift.end
+                        )}`}</div>
                         {shouldShowShiftType(shift, worker) && (
                           <div className="text-gray-500 text-xs">
                             {shift.type === "CAMP"
@@ -697,7 +707,7 @@ const WorkerRow = ({
         onMouseUp={onRevealHoursEnd}
         onMouseLeave={onRevealHoursEnd}
       >
-        {weeklyTotal.toFixed(2)}
+        {formatHours(weeklyTotal)}
       </td>
     </tr>
   );

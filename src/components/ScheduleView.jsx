@@ -29,6 +29,7 @@ import {
   ChevronRight,
   Ellipsis,
   EllipsisVertical,
+  Clock,
 } from "lucide-react";
 
 // --- Define column widths for the table ---
@@ -153,6 +154,11 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   const { worker, initialShift } = targetCell;
   const [shifts, setShifts] = useState([]);
   const [editingCustomIndex, setEditingCustomIndex] = useState(null);
+  const [customOffMode, setCustomOffMode] = useState(false);
+  const [customOffTime, setCustomOffTime] = useState({
+    start: "09:00",
+    end: "17:00",
+  });
   const popoverRef = useRef(null);
 
   useEffect(() => {
@@ -220,6 +226,11 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   };
 
   const handleToggleStatus = (statusType) => {
+    if (statusType === "CUSTOM_OFF") {
+      setCustomOffMode(true);
+      return;
+    }
+
     const currentStatuses = Array.isArray(initialShift)
       ? initialShift.filter((s) => s.type === "OFF" || s.type === "SWIM MEET")
       : [];
@@ -241,6 +252,31 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
       : [];
 
     const allShifts = [...newStatuses, ...existingWorkShifts];
+    onSave(allShifts.length > 0 ? allShifts : null);
+  };
+
+  const handleCustomOffSave = () => {
+    const customOffShift = {
+      type: "OFF",
+      start: customOffTime.start,
+      end: customOffTime.end,
+    };
+
+    // Get existing statuses except OFF
+    const currentStatuses = Array.isArray(initialShift)
+      ? initialShift.filter((s) => s.type === "SWIM MEET")
+      : [];
+
+    // Get existing work shifts
+    const existingWorkShifts = Array.isArray(initialShift)
+      ? initialShift.filter((s) => s.type !== "OFF" && s.type !== "SWIM MEET")
+      : [];
+
+    const allShifts = [
+      ...currentStatuses,
+      customOffShift,
+      ...existingWorkShifts,
+    ];
     onSave(allShifts.length > 0 ? allShifts : null);
   };
 
@@ -289,7 +325,11 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
     const handleKeyDown = (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        handleSave();
+        if (customOffMode) {
+          handleCustomOffSave();
+        } else {
+          handleSave();
+        }
       }
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -303,158 +343,213 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
       style={getPopoverStyle()}
     >
       <div className="space-y-2">
-        <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-          {shifts.map((shift, index) => {
-            const applicablePresets = presets.filter((p) =>
-              p.applicableTo.includes(shift.type)
-            );
-            return (
-              <div
-                key={index}
-                className="p-2 border rounded-md space-y-2 bg-gray-50 relative"
-              >
-                <select
-                  value={shift.type}
-                  onChange={(e) =>
-                    handleShiftChange(index, "type", e.target.value)
-                  }
-                  className="w-full p-1 border rounded-md bg-white"
-                >
-                  <option>GUARD</option>
-                  <option>MANAGER</option>
-                  <option>FRONT</option>
-                  <option>LESSONS</option>
-                  <option>CAMP</option>
-                </select>
-                {editingCustomIndex === index ? (
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="time"
-                      value={shift.start}
-                      onChange={(e) =>
-                        handleShiftChange(index, "start", e.target.value)
-                      }
-                      className="w-full p-1 border rounded-md"
-                    />
-                    <span>-</span>
-                    <input
-                      type="time"
-                      value={shift.end}
-                      onChange={(e) =>
-                        handleShiftChange(index, "end", e.target.value)
-                      }
-                      className="w-full p-1 border rounded-md"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap items-center gap-1 justify-center">
-                    {applicablePresets.map((p) => {
-                      const isSelected =
-                        shift.start === p.start && shift.end === p.end;
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => handlePredefinedClick(index, p)}
-                          className={`text-xs px-2 py-1 rounded ${
-                            isSelected
-                              ? "bg-black text-white"
-                              : "bg-gray-200 hover:bg-blue-200"
-                          }`}
-                        >
-                          {`${formatTime12hr(p.start).replace(
-                            /:00$/,
-                            ""
-                          )}-${formatTime12hr(p.end).replace(/:00$/, "")}`}
-                        </button>
-                      );
-                    })}
-                    <button
-                      onClick={() => setEditingCustomIndex(index)}
-                      className="text-xs px-2 py-1 bg-gray-200 hover:bg-blue-200 rounded"
-                    >
-                      Custom
-                    </button>
-                  </div>
-                )}
-                {shifts.length > 1 && (
-                  <button
-                    onClick={() => removeShift(index)}
-                    className="absolute -top-1 -right-2 bg-red-500 z-100 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs"
+        {!customOffMode ? (
+          <>
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+              {shifts.map((shift, index) => {
+                const applicablePresets = presets.filter((p) =>
+                  p.applicableTo.includes(shift.type)
+                );
+                return (
+                  <div
+                    key={index}
+                    className="p-2 border rounded-md space-y-2 bg-gray-50 relative"
                   >
-                    &times;
-                  </button>
+                    <select
+                      value={shift.type}
+                      onChange={(e) =>
+                        handleShiftChange(index, "type", e.target.value)
+                      }
+                      className="w-full p-1 border rounded-md bg-white"
+                    >
+                      <option>GUARD</option>
+                      <option>MANAGER</option>
+                      <option>FRONT</option>
+                      <option>LESSONS</option>
+                      <option>CAMP</option>
+                    </select>
+                    {editingCustomIndex === index ? (
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="time"
+                          value={shift.start}
+                          onChange={(e) =>
+                            handleShiftChange(index, "start", e.target.value)
+                          }
+                          className="w-full p-1 border rounded-md"
+                        />
+                        <span>-</span>
+                        <input
+                          type="time"
+                          value={shift.end}
+                          onChange={(e) =>
+                            handleShiftChange(index, "end", e.target.value)
+                          }
+                          className="w-full p-1 border rounded-md"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-1 justify-center">
+                        {applicablePresets.map((p) => {
+                          const isSelected =
+                            shift.start === p.start && shift.end === p.end;
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => handlePredefinedClick(index, p)}
+                              className={`text-xs px-2 py-1 rounded ${
+                                isSelected
+                                  ? "bg-black text-white"
+                                  : "bg-gray-200 hover:bg-blue-200"
+                              }`}
+                            >
+                              {`${formatTime12hr(p.start).replace(
+                                /:00$/,
+                                ""
+                              )}-${formatTime12hr(p.end).replace(/:00$/, "")}`}
+                            </button>
+                          );
+                        })}
+                        <button
+                          onClick={() => setEditingCustomIndex(index)}
+                          className="text-xs px-2 py-1 bg-gray-200 hover:bg-blue-200 rounded"
+                        >
+                          Custom
+                        </button>
+                      </div>
+                    )}
+                    {shifts.length > 1 && (
+                      <button
+                        onClick={() => removeShift(index)}
+                        className="absolute -top-1 -right-2 bg-red-500 z-100 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={addShift}
+                className="w-full text-sm p-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded"
+              >
+                + Another Shift
+              </button>
+              <button
+                onClick={handleSave}
+                className="w-full text-sm p-1 bg-blue-500 text-white rounded"
+              >
+                Save Shift
+              </button>
+            </div>
+            <hr />
+            <div className="flex space-x-2">
+              <button
+                onClick={() => onSave(null)}
+                className="w-full text-sm text-center p-1 px-2 text-gray-700 bg-gray-200 hover:bg-gray-200 rounded"
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => handleToggleStatus("SWIM MEET")}
+                className={`text-sm text-nowrap text-center p-1 px-2 rounded flex items-center justify-center gap-1 ${
+                  hasSwimMeetStatus
+                    ? "text-orange-600 bg-orange-200 border border-orange-400"
+                    : "text-orange-600 bg-orange-100 hover:bg-orange-200"
+                }`}
+              >
+                {hasSwimMeetStatus && (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <polyline points="20,6 9,17 4,12"></polyline>
+                  </svg>
                 )}
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={addShift}
-            className="w-full text-sm p-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded"
-          >
-            + Another Shift
-          </button>
-          <button
-            onClick={handleSave}
-            className="w-full text-sm p-1 bg-blue-500 text-white rounded"
-          >
-            Save Shift
-          </button>
-        </div>
-        <hr />
-        <div className="flex space-x-2">
-          <button
-            onClick={() => onSave(null)}
-            className="w-full text-sm text-center p-1 text-gray-700 bg-gray-200 hover:bg-gray-200 rounded"
-          >
-            Reset
-          </button>
-          <button
-            onClick={() => handleToggleStatus("SWIM MEET")}
-            className={`w-full text-sm text-center p-1 rounded flex items-center justify-center gap-1 ${
-              hasSwimMeetStatus
-                ? "text-orange-600 bg-orange-200 border border-orange-400"
-                : "text-orange-600 bg-orange-100 hover:bg-orange-200"
-            }`}
-          >
-            {hasSwimMeetStatus && (
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+                Swim Meet
+              </button>
+              <button
+                onClick={() => handleToggleStatus("OFF")}
+                className={`w-full text-sm text-center p-1 px-2 rounded flex items-center justify-center gap-1 ${
+                  hasOffStatus
+                    ? "text-red-600 bg-red-200 border border-red-400"
+                    : "text-red-600 bg-red-100 hover:bg-red-200"
+                }`}
               >
-                <polyline points="20,6 9,17 4,12"></polyline>
-              </svg>
-            )}
-            Swim Meet
-          </button>
-          <button
-            onClick={() => handleToggleStatus("OFF")}
-            className={`w-full text-sm text-center p-1 rounded flex items-center justify-center gap-1 ${
-              hasOffStatus
-                ? "text-red-600 bg-red-200 border border-red-400"
-                : "text-red-600 bg-red-100 hover:bg-red-200"
-            }`}
-          >
-            {hasOffStatus && (
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+                {hasOffStatus && (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <polyline points="20,6 9,17 4,12"></polyline>
+                  </svg>
+                )}
+                OFF
+              </button>
+              <button
+                onClick={() => handleToggleStatus("CUSTOM_OFF")}
+                className="text-sm text-center p-1 px-2 rounded flex items-center justify-center gap-1 text-red-600 bg-red-100 hover:bg-red-200"
               >
-                <polyline points="20,6 9,17 4,12"></polyline>
-              </svg>
-            )}
-            OFF
-          </button>
-        </div>
+                <Clock width={15} />
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-gray-700 text-center">
+              Set Custom OFF Time
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="time"
+                value={customOffTime.start}
+                onChange={(e) =>
+                  setCustomOffTime((prev) => ({
+                    ...prev,
+                    start: e.target.value,
+                  }))
+                }
+                className="w-full p-2 border rounded-md"
+              />
+              <span className="text-gray-500">to</span>
+              <input
+                type="time"
+                value={customOffTime.end}
+                onChange={(e) =>
+                  setCustomOffTime((prev) => ({
+                    ...prev,
+                    end: e.target.value,
+                  }))
+                }
+                className="w-full p-2 border rounded-md"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCustomOffMode(false)}
+                className="w-full text-sm p-1 bg-gray-200 hover:bg-gray-300 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCustomOffSave}
+                className="w-full text-sm p-1 bg-red-100 hover:bg-red-200 text-red-600 rounded"
+              >
+                Set Custom OFF
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -675,7 +770,7 @@ const WorkerRow = ({
           width: columnWidths.workerName,
           minWidth: columnWidths.workerName,
         }}
-        className={`cell-padding !pl-1 border text-sm font-medium no-scrollbar overflow-auto transition-colors duration-100 cursor-pointer ${getCellClass(
+        className={`cell-padding !pl-1 border text-sm no-scrollbar overflow-auto transition-colors duration-100 cursor-pointer ${getCellClass(
           "name"
         )}`}
         onClick={() => onWorkerClick(worker)}
@@ -698,7 +793,7 @@ const WorkerRow = ({
       </td>
       <td
         style={{ width: columnWidths.yos, minWidth: columnWidths.yos }}
-        className={`cell-padding border text-center transition-colors duration-100 ${getCellClass(
+        className={`cell-padding border text-sm text-center transition-colors duration-100 ${getCellClass(
           "yos"
         )}`}
         onMouseEnter={() => handleMouseEnter(worker.uid, "yos")}
@@ -738,9 +833,17 @@ const WorkerRow = ({
             ) : Array.isArray(dayShifts) ? (
               <div className="space-y-0.5">
                 {/* Show OFF/SWIM MEET status first */}
-                {dayShifts.filter((s) => s.type === "OFF").length > 0 && (
-                  <div className="text-xs text-red-500">OFF</div>
-                )}
+                {dayShifts
+                  .filter((s) => s.type === "OFF")
+                  .map((offShift, index) => (
+                    <div key={`off-${index}`} className="text-xs text-red-500">
+                      {offShift.start && offShift.end
+                        ? `OFF ${formatTime12hr(
+                            offShift.start
+                          )}-${formatTime12hr(offShift.end)}`
+                        : "OFF"}
+                    </div>
+                  ))}
                 {dayShifts.filter((s) => s.type === "SWIM MEET").length > 0 && (
                   <div className="text-xs text-orange-400">SWIM MEET</div>
                 )}
@@ -779,8 +882,9 @@ const WorkerRow = ({
       <td
         style={{ width: columnWidths.total, minWidth: columnWidths.total }}
         className={`cell-padding border text-sm ${
-          weeklyTotal > 40 && "text-red-500 bg-red-50 border-black"
-        } text-center font-medium transition-colors duration-100 cursor-pointer ${getCellClass(
+          weeklyTotal > 40 &&
+          "text-red-500 bg-red-50 border-black font-semibold"
+        } text-center transition-colors duration-100 cursor-pointer ${getCellClass(
           "total"
         )}`}
         onMouseEnter={() => handleMouseEnter(worker.uid, "total")}
@@ -1465,11 +1569,11 @@ const ScheduleView = ({
           >
             <div>{headerDates[i]}</div>
             <div className="flex items-center justify-center gap-3">
-              <div className="text-blue-600 font-bold text-xs mt-1">
+              <div className="text-blue-600 font-bold text-xs">
                 {dailyStaffCounts[dayKey]?.GUARD || "0"}{" "}
                 <span className="font-medium"> G</span>
               </div>
-              <div className="text-green-600 font-bold text-xs mt-1">
+              <div className="text-green-600 font-bold text-xs">
                 {dailyStaffCounts[dayKey]?.FRONT || "0"}{" "}
                 <span className="font-medium"> F</span>
               </div>
@@ -1828,24 +1932,7 @@ const ScheduleView = ({
           </button>
         </div>
       </div>
-      {/* Bulk Actions Bar */}
-      {isManager && (
-        <BulkActionsBar
-          selectedWorkers={selectedWorkers}
-          handleBulkUpdate={handleBulkUpdate}
-          handleBulkRemove={handleBulkRemove}
-          handleUndo={handleUndo}
-          handleRedo={handleRedo}
-          canUndo={historyIndex > 0}
-          canRedo={historyIndex < history.length - 1}
-          onPrint={handlePrint}
-          isPublished={isPublished}
-          hasUnpublishedChanges={hasUnpublishedChanges}
-          onPublish={handlePublish}
-          onUnpublish={handleUnpublish}
-          onPublishChanges={handlePublishChanges}
-        />
-      )}
+
       {/* No Schedule Published Message */}
       {!isManager && !loading && !isPublished && (
         <div className="text-center p-8 bg-gray-50 rounded-lg">
@@ -1854,29 +1941,54 @@ const ScheduleView = ({
           </p>
         </div>
       )}
-      {/* Week Header */}
-      <div
-        ref={headerContainerRef}
-        className="overflow-x-auto no-scrollbar sticky top-0 z-10 shadow-md"
-      >
-        <table
-          className="w-full border-collapse border"
-          style={{ tableLayout: "fixed" }}
+
+      {/* Header */}
+      <div className="sticky top-0 z-10">
+        {/* Bulk Actions Bar */}
+        {isManager && (
+          <BulkActionsBar
+            selectedWorkers={selectedWorkers}
+            handleBulkUpdate={handleBulkUpdate}
+            handleBulkRemove={handleBulkRemove}
+            handleUndo={handleUndo}
+            handleRedo={handleRedo}
+            canUndo={historyIndex > 0}
+            canRedo={historyIndex < history.length - 1}
+            onPrint={handlePrint}
+            isPublished={isPublished}
+            hasUnpublishedChanges={hasUnpublishedChanges}
+            onPublish={handlePublish}
+            onUnpublish={handleUnpublish}
+            onPublishChanges={handlePublishChanges}
+          />
+        )}
+
+        {/* Week Header */}
+        <div
+          ref={headerContainerRef}
+          className="overflow-x-auto no-scrollbar sticky top-0 z-10 shadow-md"
         >
-          <thead>{renderWeekHeader()}</thead>
-        </table>
+          <table
+            className="w-full border-collapse border"
+            style={{ tableLayout: "fixed" }}
+          >
+            <thead>{renderWeekHeader()}</thead>
+          </table>
+        </div>
+
+        {/* Top Scrollbar */}
+        <div
+          ref={topScrollbarRef}
+          className="overflow-x-auto overflow-y-hidden transition-all duration-300"
+          style={{
+            height: showTopScrollbar ? "15px" : "0",
+            visibility: showTopScrollbar ? "visible" : "hidden",
+          }}
+        >
+          <div style={{ height: "1px" }}></div>
+        </div>
       </div>
-      {/* Top Scrollbar */}
-      <div
-        ref={topScrollbarRef}
-        className="overflow-x-auto overflow-y-hidden transition-all duration-300"
-        style={{
-          height: showTopScrollbar ? "15px" : "0",
-          visibility: showTopScrollbar ? "visible" : "hidden",
-        }}
-      >
-        <div style={{ height: "1px" }}></div>
-      </div>
+
       {/* Schedule Table */}
       {((isManager && !loading) || (!isManager && isPublished)) && (
         <div className="overflow-x-auto" ref={mainContentRef}>

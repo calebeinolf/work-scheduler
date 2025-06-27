@@ -138,9 +138,12 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl"
+        className="bg-white rounded-lg shadow-xl w-full max-w-2xl "
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
@@ -313,7 +316,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
             + Add New Preset
           </button>
         </div>
-        <div className="bg-gray-100 p-3 flex justify-end space-x-3 rounded-b-lg">
+        <div className="bg-gray-50 border-t border-gray-200 p-3 flex justify-end space-x-3 rounded-b-lg">
           <button
             type="button"
             onClick={onClose}

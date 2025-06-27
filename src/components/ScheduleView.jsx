@@ -30,6 +30,8 @@ import {
   Ellipsis,
   EllipsisVertical,
   Clock,
+  Calendar,
+  Pencil, // Add this import for off rules
 } from "lucide-react";
 
 // --- Define column widths for the table ---
@@ -563,6 +565,247 @@ const getSundayOfWeek = (d) => {
   return new Date(date.setDate(diff));
 };
 
+// --- Off Rules Modal Component ---
+const OffRulesModal = ({ worker, isOpen, onClose }) => {
+  const [offRules, setOffRules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen || !worker) return;
+
+    const fetchOffRules = async () => {
+      try {
+        const workerDoc = doc(db, "users", worker.uid);
+        const unsubscribe = onSnapshot(workerDoc, (docSnap) => {
+          const data = docSnap.data();
+          setOffRules(data?.offRules || []);
+          setLoading(false);
+        });
+        return unsubscribe;
+      } catch (error) {
+        console.error("Error fetching off rules:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchOffRules();
+  }, [isOpen, worker]);
+
+  // Close modal when clicking outside
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClick = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isOpen, onClose]);
+
+  const addOffRule = () => {
+    const newRule = {
+      id: Date.now().toString(),
+      dayOfWeek: 0, // Sunday
+      startTime: "16:00",
+      endTime: "20:30",
+      isActive: true,
+      description: "",
+    };
+    setOffRules([...offRules, newRule]);
+  };
+
+  const updateOffRule = (ruleId, updates) => {
+    setOffRules((rules) =>
+      rules.map((rule) => (rule.id === ruleId ? { ...rule, ...updates } : rule))
+    );
+  };
+
+  const removeOffRule = (ruleId) => {
+    setOffRules((rules) => rules.filter((rule) => rule.id !== ruleId));
+  };
+
+  const saveOffRules = async () => {
+    try {
+      const workerDoc = doc(db, "users", worker.uid);
+      await updateDoc(workerDoc, { offRules });
+      onClose();
+    } catch (error) {
+      console.error("Error saving off rules:", error);
+      alert("Failed to save off rules. Please try again.");
+    }
+  };
+
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div
+        ref={modalRef}
+        className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 flex-1 overflow-hidden flex flex-col">
+          <h3 className="text-xl font-bold text-gray-800 mb-2">
+            Off Rules for {worker.fullName}
+          </h3>
+          <p className="text-sm text-gray-600 mb-2">
+            Set recurring weekly off periods that will be automatically applied
+            to schedules
+          </p>
+
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : (
+            <div className="flex-1 overflow-y-auto">
+              <div className="space-y-4">
+                {offRules.map((rule) => (
+                  <div
+                    key={rule.id}
+                    className="border rounded-lg p-4 space-y-4 bg-gray-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={rule.isActive}
+                          onChange={(e) =>
+                            updateOffRule(rule.id, {
+                              isActive: e.target.checked,
+                            })
+                          }
+                          className="rounded"
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+                          Active
+                        </span>
+                      </label>
+                      <button
+                        onClick={() => removeOffRule(rule.id)}
+                        className="text-red-500 hover:text-red-700 text-sm font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Day of Week
+                      </label>
+                      <select
+                        value={rule.dayOfWeek}
+                        onChange={(e) =>
+                          updateOffRule(rule.id, {
+                            dayOfWeek: parseInt(e.target.value),
+                          })
+                        }
+                        className="w-full p-2 border bg-white rounded"
+                      >
+                        {dayNames.map((day, index) => (
+                          <option key={index} value={index}>
+                            {day}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Start Time
+                        </label>
+                        <input
+                          type="time"
+                          value={rule.startTime}
+                          onChange={(e) =>
+                            updateOffRule(rule.id, {
+                              startTime: e.target.value,
+                            })
+                          }
+                          className="w-full p-2 border rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          End Time
+                        </label>
+                        <input
+                          type="time"
+                          value={rule.endTime}
+                          onChange={(e) =>
+                            updateOffRule(rule.id, { endTime: e.target.value })
+                          }
+                          className="w-full p-2 border rounded"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Description (optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={rule.description || ""}
+                        onChange={(e) =>
+                          updateOffRule(rule.id, {
+                            description: e.target.value,
+                          })
+                        }
+                        placeholder="e.g., Soccer practice"
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {offRules.length === 0 && (
+                  <div className="text-center text-gray-500 py-8">
+                    No off rules set. Click "Add Off Rule" to create one.
+                  </div>
+                )}
+
+                <button
+                  onClick={addOffRule}
+                  className="w-full px-4 py-2 mb-2 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200 font-medium"
+                >
+                  Add Off Rule
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-gray-50 p-3 flex justify-end space-x-3 rounded-b-lg border-t border-gray-300">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={saveOffRules}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Save Rules
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Worker Details Modal Component ---
 const WorkerDetailModal = ({
   worker,
@@ -571,80 +814,96 @@ const WorkerDetailModal = ({
   onDelete,
   isManager,
 }) => {
+  const [showOffRules, setShowOffRules] = useState(false);
+
   if (!worker) return null;
   return (
-    <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
+    <>
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-sm"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        onClick={onClose}
       >
-        <div className="p-6">
-          <h3 className="text-2xl font-semibold text-gray-800">
-            {worker.fullName}
-          </h3>
-          {isManager && (
-            <p className="text-gray-500">
-              {worker.isMinor ? "Minor" : "Adult"}
-            </p>
-          )}
-          <div className="mt-6 space-y-3 text-xs">
-            <div className="flex justify-between">
-              <span className="font-semibold text-gray-600">Position:</span>
-              <span className="text-gray-800">{worker.title}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-semibold text-gray-600">Email:</span>
-              <span className="text-gray-800">
-                {worker.email || "Not provided"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-semibold text-gray-600">Phone:</span>
-              <span className="text-gray-800">
-                {worker.phone || "Not provided"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-semibold text-gray-600">YOS:</span>
-              <span className="text-gray-800">{worker.yos ?? "N/A"}</span>
+        <div
+          className="bg-white rounded-lg shadow-xl w-full max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-6">
+            <h3 className="text-2xl font-semibold text-gray-800">
+              {worker.fullName}
+            </h3>
+            {isManager && (
+              <p className="text-gray-500">
+                {worker.isMinor ? "Minor" : "Adult"}
+              </p>
+            )}
+            <div className="mt-6 space-y-3 text-xs">
+              <div className="flex justify-between">
+                <span className="font-semibold text-gray-600">Position:</span>
+                <span className="text-gray-800">{worker.title}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold text-gray-600">Email:</span>
+                <span className="text-gray-800">
+                  {worker.email || "Not provided"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold text-gray-600">Phone:</span>
+                <span className="text-gray-800">
+                  {worker.phone || "Not provided"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold text-gray-600">YOS:</span>
+                <span className="text-gray-800">{worker.yos ?? "N/A"}</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="bg-gray-50 p-3 flex justify-between rounded-b-lg">
-          {
-            isManager ? (
-              <button
-                onClick={() => onDelete(worker.uid)}
-                className="px-4 py-2 bg-red-100 text-red-500 rounded-md hover:bg-red-200"
-              >
-                Remove
-              </button>
-            ) : (
-              <div />
-            ) /* Placeholder to maintain layout */
-          }
-          <div className="flex space-x-2">
+          <div className="bg-gray-50 border-t border-gray-200 p-3 space-y-2 rounded-b-lg">
             {isManager && (
-              <button
-                onClick={() => onEdit(worker)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-              >
-                Edit
-              </button>
+              <div className="flex gap-1 justify-end">
+                <button
+                  onClick={() => onDelete(worker.uid)}
+                  className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 text-sm"
+                >
+                  Remove
+                </button>
+                {isManager && (
+                  <button
+                    onClick={() => setShowOffRules(true)}
+                    className="text-nowrap flex items-center gap-2 px-3 py-2 text-red-600 bg-red-100  rounded-md hover:bg-red-200 text-sm"
+                  >
+                    <Calendar width={16} />
+                    OFF Rules
+                  </button>
+                )}
+                {isManager && (
+                  <button
+                    onClick={() => onEdit(worker)}
+                    className="w-full px-4 py-2 flex items-center gap-2 text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 text-sm"
+                  >
+                    <Pencil width={16} />
+                    Edit
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
+                >
+                  Close
+                </button>
+              </div>
             )}
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              Close
-            </button>
           </div>
         </div>
       </div>
-    </div>
+
+      <OffRulesModal
+        worker={worker}
+        isOpen={showOffRules}
+        onClose={() => setShowOffRules(false)}
+      />
+    </>
   );
 };
 
@@ -1408,11 +1667,85 @@ const ScheduleView = ({
     return `${company.id}_${weekId}`;
   }, [company, weekStartDate]);
 
+  // Add function to apply off rules when schedule loads
+  const applyOffRules = async (scheduleData, workers) => {
+    if (!isManager) return scheduleData;
+
+    let hasChanges = false;
+    const updatedSchedule = { ...scheduleData };
+    const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+    for (const worker of workers) {
+      if (!worker.offRules || worker.offRules.length === 0) continue;
+
+      const activeRules = worker.offRules.filter((rule) => rule.isActive);
+      if (activeRules.length === 0) continue;
+
+      if (!updatedSchedule[worker.uid]) {
+        updatedSchedule[worker.uid] = {};
+      }
+
+      dayKeys.forEach((dayKey, dayIndex) => {
+        const applicableRules = activeRules.filter(
+          (rule) => rule.dayOfWeek === dayIndex
+        );
+        if (applicableRules.length === 0) return;
+
+        const currentShifts = updatedSchedule[worker.uid][dayKey] || [];
+        const existingOffShifts = Array.isArray(currentShifts)
+          ? currentShifts.filter((s) => s.type === "OFF")
+          : [];
+        const otherShifts = Array.isArray(currentShifts)
+          ? currentShifts.filter((s) => s.type !== "OFF")
+          : [];
+
+        // Check if we need to add any off rules
+        const newOffShifts = [...existingOffShifts];
+
+        applicableRules.forEach((rule) => {
+          const ruleExists = existingOffShifts.some(
+            (shift) =>
+              shift.start === rule.startTime &&
+              shift.end === rule.endTime &&
+              shift.ruleId === rule.id
+          );
+
+          if (!ruleExists) {
+            newOffShifts.push({
+              type: "OFF",
+              start: rule.startTime,
+              end: rule.endTime,
+              ruleId: rule.id,
+              description: rule.description,
+            });
+            hasChanges = true;
+          }
+        });
+
+        // Remove off shifts that no longer have corresponding rules
+        const validOffShifts = newOffShifts.filter((shift) => {
+          if (!shift.ruleId) return true; // Keep manual off shifts
+          return activeRules.some((rule) => rule.id === shift.ruleId);
+        });
+
+        if (validOffShifts.length !== newOffShifts.length) {
+          hasChanges = true;
+        }
+
+        const allShifts = [...validOffShifts, ...otherShifts];
+        updatedSchedule[worker.uid][dayKey] =
+          allShifts.length > 0 ? allShifts : null;
+      });
+    }
+
+    return hasChanges ? updatedSchedule : scheduleData;
+  };
+
   useEffect(() => {
     if (!scheduleDocId) return;
 
     const scheduleDocRef = doc(db, "schedules", scheduleDocId);
-    const unsubscribe = onSnapshot(scheduleDocRef, (docSnap) => {
+    const unsubscribe = onSnapshot(scheduleDocRef, async (docSnap) => {
       const docData = docSnap.data() || {};
       setScheduleDocData(docData);
 
@@ -1426,14 +1759,17 @@ const ScheduleView = ({
         ? docData.shifts || {}
         : docData.isPublished
         ? docData.publishedShifts || {}
-        : docData.shifts || {}; // Allow non-managers to see all shifts (filtering happens in displayScheduleData)
+        : docData.shifts || {};
 
-      if (deepEqual(shiftsForView, history[historyIndex])) {
+      // Apply off rules if manager
+      const shiftsWithOffRules = await applyOffRules(shiftsForView, workers);
+
+      if (deepEqual(shiftsWithOffRules, history[historyIndex])) {
         setLoading(false);
         return;
       }
 
-      const updatedShifts = { ...shiftsForView };
+      const updatedShifts = { ...shiftsWithOffRules };
       let needsUpdate = false;
       if (isManager) {
         workers.forEach((worker) => {
@@ -1444,7 +1780,8 @@ const ScheduleView = ({
         });
       }
 
-      if (needsUpdate) {
+      // Save back to database if off rules were applied
+      if (shiftsWithOffRules !== shiftsForView || needsUpdate) {
         setDoc(
           scheduleDocRef,
           {
@@ -1456,6 +1793,7 @@ const ScheduleView = ({
           { merge: true }
         );
       }
+
       setHistory([updatedShifts]);
       setHistoryIndex(0);
       setLoading(false);

@@ -70,7 +70,10 @@ const EditWorkerModal = ({ worker, isOpen, onClose }) => {
   const showEmailWarning = worker.authUid && worker.email !== formData.email;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <div
         className="bg-white rounded-lg shadow-xl w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
@@ -199,7 +202,7 @@ const EditWorkerModal = ({ worker, isOpen, onClose }) => {
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 p-3 flex justify-end space-x-3 rounded-b-lg">
+          <div className="bg-gray-50 border-t border-gray-200 p-3 flex justify-end space-x-3 rounded-b-lg">
             <button
               type="button"
               onClick={onClose}

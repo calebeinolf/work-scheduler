@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebase";
+import Loader from "../assets/Loader";
 
 const HomePage = () => {
   // Add state to track the user's authentication status.
@@ -61,11 +62,16 @@ const HomePage = () => {
                 }`}
               >
                 {/* Change button text based on auth status */}
-                {authStatus === "loggedIn"
-                  ? "Go to Dashboard"
-                  : authStatus === "loading"
-                  ? "Checking..."
-                  : "Log In"}
+                {authStatus === "loggedIn" ? (
+                  "Go to Dashboard"
+                ) : authStatus === "loading" ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader color={"white"} />
+                    Checking...
+                  </div>
+                ) : (
+                  "Log In"
+                )}
               </Link>
               <Link
                 to="/signup"

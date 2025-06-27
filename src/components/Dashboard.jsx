@@ -15,6 +15,7 @@ import { auth, db } from "../firebase";
 import ManagerDashboard from "./ManagerDashboard";
 import WorkerDashboard from "./WorkerDashboard";
 import { LogOut } from "lucide-react";
+import Loader from "../assets/Loader";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -103,8 +104,9 @@ const Dashboard = () => {
   const renderContent = () => {
     if (loading)
       return (
-        <div className="text-center p-10">
-          <p className="text-lg">Loading Dashboard...</p>
+        <div className="flex items-center justify-center gap-2 text-center p-10">
+          <Loader width={22} />
+          <p className="text-lg text-gray-500">Loading Dashboard</p>
         </div>
       );
     if (error)

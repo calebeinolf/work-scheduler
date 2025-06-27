@@ -5,6 +5,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { auth, db } from "../firebase";
+import Loader from "../assets/Loader";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -49,6 +50,8 @@ const Login = () => {
     }
   };
 
+  const [loading, setLoading] = useState(false);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
@@ -62,7 +65,13 @@ const Login = () => {
           </p>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={async (e) => {
+            setLoading(true);
+            await handleSubmit(e);
+            setLoading(false);
+          }}
+        >
           <div className="mb-4">
             <label
               htmlFor="email"
@@ -78,6 +87,7 @@ const Login = () => {
               required
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="you@example.com"
+              disabled={loading}
             />
           </div>
           <div className="mb-6">
@@ -95,14 +105,17 @@ const Login = () => {
               required
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="••••••••"
+              disabled={loading}
             />
           </div>
           <div className="flex items-center justify-between">
             <button
               type="submit"
-              className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center justify-center"
+              disabled={loading}
             >
-              Log In
+              {loading ? <Loader color={"white"} /> : null}
+              {loading ? "Logging In..." : "Log In"}
             </button>
           </div>
         </form>

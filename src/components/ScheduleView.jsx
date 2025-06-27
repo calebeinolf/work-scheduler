@@ -33,6 +33,7 @@ import {
   Calendar,
   Pencil, // Add this import for off rules
 } from "lucide-react";
+import Loader from "../assets/Loader";
 
 // --- Define column widths for the table ---
 const columnWidths = {
@@ -2611,7 +2612,7 @@ const ScheduleView = ({
             {loading ? (
               <tr>
                 <td colSpan={11} className="text-center p-4">
-                  Loading schedule...
+                  <Loader /> Loading schedule...
                 </td>
               </tr>
             ) : (

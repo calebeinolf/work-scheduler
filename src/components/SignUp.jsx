@@ -1,148 +1,50 @@
-// src/components/SignUp.jsx
+// src/components/LandingPage.jsx
 
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
+import React from "react";
+import { Link } from "react-router-dom";
 
-const SignUp = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState(""); // Added back
-  const [lastName, setLastName] = useState(""); // Added back
-  const [error, setError] = useState("");
-
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-
-      // Pass name info to the next step; it will be used if the user is a manager.
-      navigate("/role-selection", {
-        state: {
-          firstName,
-          lastName,
-        },
-      });
-    } catch (err) {
-      setError(err.message);
-      console.error("Failed to create an account:", err);
-    }
-  };
-
+const LandingPage = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="w-full max-w-lg bg-white rounded-lg shadow-md p-8">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Create an Account
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-xl text-center">
+        <h1 className="text-3xl font-bold text-gray-800 mb-8">Get Started</h1>
 
-        {error && (
-          <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4 text-center">
-            {error}
-          </p>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="firstName"
-                className="block text-gray-700 text-sm font-bold mb-2"
-              >
-                First Name
-              </label>
-              <input
-                type="text"
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Jane"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="lastName"
-                className="block text-gray-700 text-sm font-bold mb-2"
-              >
-                Last Name
-              </label>
-              <input
-                type="text"
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Doe"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-gray-700 text-sm font-bold mb-2"
-            >
-              Email Address
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-gray-700 text-sm font-bold mb-2"
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="submit"
-              className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-              Sign Up
-            </button>
-          </div>
-        </form>
-
-        <p className="text-center text-gray-500 text-sm mt-6">
-          Already have an account?{" "}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Create Company Card */}
           <Link
-            to="/login"
-            className="font-bold text-blue-500 hover:text-blue-700"
+            to="/create-company"
+            className="block p-8 bg-white rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
           >
-            Log In
+            <h2 className="text-2xl font-bold text-blue-600">Create Company</h2>
+            <p className="mt-2 text-gray-500">
+              For the Manager. Start building your company's schedule.
+            </p>
           </Link>
-        </p>
+
+          {/* Join Company Card */}
+          <Link
+            to="/join-company"
+            className="block p-8 bg-white rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <h2 className="text-2xl font-bold text-green-600">Join Company</h2>
+            <p className="mt-2 text-gray-500">
+              For Workers. Use your email and a company code to access your
+              schedule.
+            </p>
+          </Link>
+        </div>
+
+        <div className="my-8 flex flex-col gap-2 justify-center items-center">
+          <p>Already have an account?</p>
+          <Link to="/login">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+              Login
+            </button>
+          </Link>
+        </div>
       </div>
     </div>
   );
 };
 
-export default SignUp;
+export default LandingPage;

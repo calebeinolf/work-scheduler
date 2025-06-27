@@ -130,15 +130,6 @@ const Dashboard = () => {
     );
   };
 
-  // Only render the dashboard UI after loading is complete
-  // if (loading) {
-  //   return (
-  //     <div className="text-center p-10">
-  //       <p className="text-lg">Loading Dashboard...</p>
-  //     </div>
-  //   );
-  // }
-
   return (
     <div className="min-h-screen">
       <header className="bg-white shadow-sm px-6 py-2">

@@ -158,8 +158,11 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   useEffect(() => {
     let startingShifts = [];
     if (Array.isArray(initialShift)) {
+      // Filter out OFF and SWIM MEET for editing - these are handled separately
       startingShifts = JSON.parse(
-        JSON.stringify(initialShift.filter((s) => s.type !== "OFF"))
+        JSON.stringify(
+          initialShift.filter((s) => s.type !== "OFF" && s.type !== "SWIM MEET")
+        )
       );
     }
     if (startingShifts.length === 0) {
@@ -206,8 +209,47 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
 
   const handleSave = () => {
     const validShifts = shifts.filter((s) => s.start && s.end);
-    onSave(validShifts.length > 0 ? validShifts : null);
+
+    // Preserve existing OFF and SWIM MEET statuses
+    const existingStatuses = Array.isArray(initialShift)
+      ? initialShift.filter((s) => s.type === "OFF" || s.type === "SWIM MEET")
+      : [];
+
+    const allShifts = [...existingStatuses, ...validShifts];
+    onSave(allShifts.length > 0 ? allShifts : null);
   };
+
+  const handleToggleStatus = (statusType) => {
+    const currentStatuses = Array.isArray(initialShift)
+      ? initialShift.filter((s) => s.type === "OFF" || s.type === "SWIM MEET")
+      : [];
+
+    const hasStatus = currentStatuses.some((s) => s.type === statusType);
+
+    let newStatuses;
+    if (hasStatus) {
+      // Remove the status
+      newStatuses = currentStatuses.filter((s) => s.type !== statusType);
+    } else {
+      // Add the status
+      newStatuses = [...currentStatuses, { type: statusType }];
+    }
+
+    // Get existing work shifts (not the edited ones in state)
+    const existingWorkShifts = Array.isArray(initialShift)
+      ? initialShift.filter((s) => s.type !== "OFF" && s.type !== "SWIM MEET")
+      : [];
+
+    const allShifts = [...newStatuses, ...existingWorkShifts];
+    onSave(allShifts.length > 0 ? allShifts : null);
+  };
+
+  // Check if current day has OFF or SWIM MEET status
+  const hasOffStatus =
+    Array.isArray(initialShift) && initialShift.some((s) => s.type === "OFF");
+  const hasSwimMeetStatus =
+    Array.isArray(initialShift) &&
+    initialShift.some((s) => s.type === "SWIM MEET");
 
   const getPopoverStyle = () => {
     if (!targetCell.rect) return { display: "none" };
@@ -346,12 +388,20 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
             );
           })}
         </div>
-        <button
-          onClick={addShift}
-          className="w-full text-sm p-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded"
-        >
-          + Add Another Shift
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={addShift}
+            className="w-full text-sm p-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded"
+          >
+            + Another Shift
+          </button>
+          <button
+            onClick={handleSave}
+            className="w-full text-sm p-1 bg-blue-500 text-white rounded"
+          >
+            Save Shift
+          </button>
+        </div>
         <hr />
         <div className="flex space-x-2">
           <button
@@ -361,24 +411,50 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
             Reset
           </button>
           <button
-            onClick={() => onSave([{ type: "SWIM MEET" }])}
-            className="w-full text-sm text-center p-1 text-orange-600 bg-orange-100 hover:bg-orange-200 rounded"
+            onClick={() => handleToggleStatus("SWIM MEET")}
+            className={`w-full text-sm text-center p-1 rounded flex items-center justify-center gap-1 ${
+              hasSwimMeetStatus
+                ? "text-orange-600 bg-orange-200 border border-orange-400"
+                : "text-orange-600 bg-orange-100 hover:bg-orange-200"
+            }`}
           >
+            {hasSwimMeetStatus && (
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <polyline points="20,6 9,17 4,12"></polyline>
+              </svg>
+            )}
             Swim Meet
           </button>
           <button
-            onClick={() => onSave([{ type: "OFF" }])}
-            className="w-full text-sm text-center p-1 text-red-600 bg-red-100 hover:bg-red-200 rounded"
+            onClick={() => handleToggleStatus("OFF")}
+            className={`w-full text-sm text-center p-1 rounded flex items-center justify-center gap-1 ${
+              hasOffStatus
+                ? "text-red-600 bg-red-200 border border-red-400"
+                : "text-red-600 bg-red-100 hover:bg-red-200"
+            }`}
           >
+            {hasOffStatus && (
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <polyline points="20,6 9,17 4,12"></polyline>
+              </svg>
+            )}
             OFF
           </button>
         </div>
-        <button
-          onClick={handleSave}
-          className="w-full text-sm p-1 bg-blue-500 text-white rounded"
-        >
-          Save All Changes
-        </button>
       </div>
     </div>
   );
@@ -546,7 +622,11 @@ const WorkerRow = ({
     if (!weeklyShifts) return 0;
     let totalHours = 0;
     Object.values(weeklyShifts).forEach((dayShifts) => {
-      totalHours += calculateDailyHours(dayShifts, worker.isMinor);
+      // Only count actual work shifts for hours calculation
+      const workShifts = Array.isArray(dayShifts)
+        ? dayShifts.filter((s) => s.type !== "OFF" && s.type !== "SWIM MEET")
+        : [];
+      totalHours += calculateDailyHours(workShifts, worker.isMinor);
     });
     return totalHours;
   }, [weeklyShifts, worker.isMinor]);
@@ -629,8 +709,12 @@ const WorkerRow = ({
         const dayShifts = weeklyShifts?.[day];
         const isRevealed = revealedHoursWorkerId === worker.uid;
         let dailyTotalHours = 0;
-        if (isRevealed) {
-          dailyTotalHours = calculateDailyHours(dayShifts, worker.isMinor);
+        if (isRevealed && Array.isArray(dayShifts)) {
+          // Only count work shifts for hours display
+          const workShifts = dayShifts.filter(
+            (s) => s.type !== "OFF" && s.type !== "SWIM MEET"
+          );
+          dailyTotalHours = calculateDailyHours(workShifts, worker.isMinor);
         }
 
         return (
@@ -652,43 +736,40 @@ const WorkerRow = ({
                 <span className="text-gray-400">0</span>
               )
             ) : Array.isArray(dayShifts) ? (
-              dayShifts[0]?.type === "OFF" ? (
-                <div className="text-xs text-red-500 h-full flex items-center justify-center">
-                  OFF
-                </div>
-              ) : dayShifts[0]?.type === "SWIM MEET" ? (
-                <div className="text-xs text-orange-400 h-full flex items-center justify-center">
-                  SWIM MEET
-                </div>
-              ) : (
-                <div>
-                  {[...dayShifts]
-                    .sort((a, b) =>
-                      (a.start || "").localeCompare(b.start || "")
-                    )
-                    .map((shift, index) => (
-                      <div
-                        key={index}
-                        className={`text-xs rounded-md p-0.5 flex items-center gap-1 justify-center text-nowrap ${getShiftHighlightClass(
-                          shift
-                        )}`}
-                      >
-                        <div>{`${formatTime12hr(shift.start)}-${formatTime12hr(
-                          shift.end
-                        )}`}</div>
-                        {shouldShowShiftType(shift, worker) && (
-                          <div className="text-gray-500 text-xs">
-                            {shift.type === "CAMP"
-                              ? "(C)"
-                              : shift.type === "LESSONS"
-                              ? "(L)"
-                              : `(${shift.type[0]})`}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              )
+              <div className="space-y-0.5">
+                {/* Show OFF/SWIM MEET status first */}
+                {dayShifts.filter((s) => s.type === "OFF").length > 0 && (
+                  <div className="text-xs text-red-500">OFF</div>
+                )}
+                {dayShifts.filter((s) => s.type === "SWIM MEET").length > 0 && (
+                  <div className="text-xs text-orange-400">SWIM MEET</div>
+                )}
+                {/* Show work shifts */}
+                {dayShifts
+                  .filter((s) => s.type !== "OFF" && s.type !== "SWIM MEET")
+                  .sort((a, b) => (a.start || "").localeCompare(b.start || ""))
+                  .map((shift, index) => (
+                    <div
+                      key={index}
+                      className={`text-xs rounded-md p-0.5 flex items-center gap-1 justify-center text-nowrap ${getShiftHighlightClass(
+                        shift
+                      )}`}
+                    >
+                      <div>{`${formatTime12hr(shift.start)}-${formatTime12hr(
+                        shift.end
+                      )}`}</div>
+                      {shouldShowShiftType(shift, worker) && (
+                        <div className="text-gray-500 text-xs">
+                          {shift.type === "CAMP"
+                            ? "(C)"
+                            : shift.type === "LESSONS"
+                            ? "(L)"
+                            : `(${shift.type[0]})`}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+              </div>
             ) : (
               <span className="text-gray-400">-</span>
             )}
@@ -715,6 +796,18 @@ const WorkerRow = ({
 
 const FloatingPresetChip = ({ preset, position }) => {
   if (!preset) return null;
+
+  // Special handling for reset mode
+  if (preset.isReset) {
+    return (
+      <div
+        className="fixed z-50 pointer-events-none text-xs font-medium px-4 py-1 rounded shadow-lg bg-gray-200 text-gray-800"
+        style={{ top: position.y + 10, left: position.x + 10 }}
+      >
+        -
+      </div>
+    );
+  }
 
   // Helper to get the highlight class for the shift
   const getShiftHighlightClass = (shift) => {
@@ -749,6 +842,10 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
     p.applicableTo.includes(selectedRole)
   );
 
+  const handleResetClick = () => {
+    onPresetSelect({ isReset: true }, selectedRole);
+  };
+
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-auto bg-gray-500 text-white p-2 rounded-t-lg shadow border border-b-0 flex items-center gap-2 z-40">
       <select
@@ -778,6 +875,16 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
             ).replace(/:00$/, "")}`}
           </button>
         ))}
+        <button
+          onClick={handleResetClick}
+          className={`text-xs px-3 py-1 rounded ${
+            activePreset?.isReset
+              ? "bg-red-500 ring-2 ring-red-300 text-white"
+              : "bg-gray-600 hover:bg-gray-700"
+          }`}
+        >
+          -
+        </button>
       </div>
       {activePreset && (
         <button
@@ -1074,13 +1181,11 @@ const ScheduleView = ({
       newScheduleData[worker.uid][day] = newShiftData;
     } else {
       const currentShifts = newScheduleData[worker.uid][day] || [];
-      const filteredShifts = Array.isArray(currentShifts)
-        ? currentShifts.filter((s) => s.type !== "OFF")
-        : [];
+      const existingShifts = Array.isArray(currentShifts) ? currentShifts : [];
       const newShiftsToAdd = Array.isArray(newShiftData)
         ? newShiftData
         : [newShiftData];
-      newScheduleData[worker.uid][day] = [...filteredShifts, ...newShiftsToAdd];
+      newScheduleData[worker.uid][day] = [...existingShifts, ...newShiftsToAdd];
     }
 
     pushNewState(newScheduleData);
@@ -1093,18 +1198,23 @@ const ScheduleView = ({
     if (!isManager) return;
     event.stopPropagation();
     if (activePreset) {
-      let defaultType = "GUARD";
-      const title = worker.title.toLowerCase();
-      if (title.includes("manager") || title.includes("head guard"))
-        defaultType = "MANAGER";
-      else if (title.includes("front")) defaultType = "FRONT";
+      if (activePreset.isReset) {
+        // Reset the cell to empty
+        handleSaveShift(worker, day, null, "replace");
+      } else {
+        let defaultType = "GUARD";
+        const title = worker.title.toLowerCase();
+        if (title.includes("manager") || title.includes("head guard"))
+          defaultType = "MANAGER";
+        else if (title.includes("front")) defaultType = "FRONT";
 
-      const newShift = {
-        start: activePreset.start,
-        end: activePreset.end,
-        type: activePreset.role || defaultType,
-      };
-      handleSaveShift(worker, day, [newShift], "append");
+        const newShift = {
+          start: activePreset.start,
+          end: activePreset.end,
+          type: activePreset.role || defaultType,
+        };
+        handleSaveShift(worker, day, [newShift], "append");
+      }
     } else {
       const currentShift = scheduleData[worker.uid]?.[day] || null;
       setPopoverTarget({
@@ -1382,11 +1492,15 @@ const ScheduleView = ({
   const renderWorkerRowForPrint = (worker) => {
     const weeklyShifts = scheduleData[worker.uid];
     const weeklyTotal = weeklyShifts
-      ? Object.values(weeklyShifts).reduce(
-          (total, dayShifts) =>
-            total + calculateDailyHours(dayShifts, worker.isMinor),
-          0
-        )
+      ? Object.values(weeklyShifts).reduce((total, dayShifts) => {
+          // Only count work shifts for print hours
+          const workShifts = Array.isArray(dayShifts)
+            ? dayShifts.filter(
+                (s) => s.type !== "OFF" && s.type !== "SWIM MEET"
+              )
+            : [];
+          return total + calculateDailyHours(workShifts, worker.isMinor);
+        }, 0)
       : 0;
 
     const shouldShowShiftType = (shift, worker) => {
@@ -1419,13 +1533,25 @@ const ScheduleView = ({
                     const dayShifts = weeklyShifts?.[day];
                     let cellContent = '<span style="color: #9ca3af;">-</span>';
                     if (Array.isArray(dayShifts)) {
-                      if (dayShifts[0]?.type === "OFF") {
-                        cellContent = '<div style="color: #ef4444;">OFF</div>';
-                      } else if (dayShifts[0]?.type === "SWIM MEET") {
-                        cellContent =
-                          '<div style="color: #ff8904;">SWIM MEET</div>';
-                      } else {
-                        cellContent = dayShifts
+                      let statusContent = "";
+                      let shiftsContent = "";
+
+                      // Check for OFF/SWIM MEET status
+                      if (dayShifts.some((s) => s.type === "OFF")) {
+                        statusContent +=
+                          '<div style="color: #ef4444; font-size: 10px;">OFF</div>';
+                      }
+                      if (dayShifts.some((s) => s.type === "SWIM MEET")) {
+                        statusContent +=
+                          '<div style="color: #ff8904; font-size: 10px;">SWIM MEET</div>';
+                      }
+
+                      // Get work shifts
+                      const workShifts = dayShifts.filter(
+                        (s) => s.type !== "OFF" && s.type !== "SWIM MEET"
+                      );
+                      if (workShifts.length > 0) {
+                        shiftsContent = workShifts
                           .map(
                             (shift) => `
                                 <div style="font-size: 10px;">
@@ -1448,11 +1574,14 @@ const ScheduleView = ({
                           )
                           .join("");
                       }
+
+                      cellContent =
+                        statusContent + shiftsContent || cellContent;
                     }
-                    return `<td style="padding: 2px; border: 1px solid #e5e7eb; text-align: center;">${cellContent}</td>`;
+                    return `<td style="padding: 2px; border: 1px solid #e7e7eb; text-align: center;">${cellContent}</td>`;
                   })
                   .join("")}
-                <td style="padding: 2px; border: 1px solid #e5e7eb; text-align: center; font-weight: 500;">${weeklyTotal.toFixed(
+                <td style="padding: 2px; border: 1px solid #e7e7eb; text-align: center; font-weight: 500;">${weeklyTotal.toFixed(
                   2
                 )}</td>
             </tr>

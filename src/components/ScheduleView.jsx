@@ -1004,7 +1004,12 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
 };
 
 // --- Personal Schedule Row Component for Current Worker ---
-const PersonalScheduleRow = ({ worker, scheduleData, weekStartDate }) => {
+const PersonalScheduleRow = ({
+  worker,
+  scheduleData,
+  weekStartDate,
+  isPublished,
+}) => {
   if (!worker) return null;
 
   const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -1020,7 +1025,7 @@ const PersonalScheduleRow = ({ worker, scheduleData, weekStartDate }) => {
 
   const weeklyShifts = scheduleData[worker.uid];
   const weeklyTotal = useMemo(() => {
-    if (!weeklyShifts) return 0;
+    if (!weeklyShifts || !isPublished) return 0; // Don't show hours if not published
     let totalHours = 0;
     Object.values(weeklyShifts).forEach((dayShifts) => {
       const workShifts = Array.isArray(dayShifts)
@@ -1029,7 +1034,7 @@ const PersonalScheduleRow = ({ worker, scheduleData, weekStartDate }) => {
       totalHours += calculateDailyHours(workShifts, worker.isMinor);
     });
     return totalHours;
-  }, [weeklyShifts, worker.isMinor]);
+  }, [weeklyShifts, worker.isMinor, isPublished]);
 
   const formatHours = (num) => {
     if (num % 1 === 0) return num.toString();
@@ -1088,15 +1093,17 @@ const PersonalScheduleRow = ({ worker, scheduleData, weekStartDate }) => {
                   {headerDates[i]}
                 </th>
               ))}
-              <th
-                style={{
-                  width: columnWidths.total,
-                  minWidth: columnWidths.total,
-                }}
-                className="header-cell-padding border text-xs font-semibold  text-center"
-              >
-                Hours
-              </th>
+              {isPublished && (
+                <th
+                  style={{
+                    width: columnWidths.total,
+                    minWidth: columnWidths.total,
+                  }}
+                  className="header-cell-padding border text-xs font-semibold  text-center"
+                >
+                  Hours
+                </th>
+              )}
             </tr>
           </thead>
           {/* Schedule Row */}
@@ -1109,10 +1116,9 @@ const PersonalScheduleRow = ({ worker, scheduleData, weekStartDate }) => {
                       (s) => s.type !== "OFF" && s.type !== "SWIM MEET"
                     )
                   : [];
-                const dailyHours = calculateDailyHours(
-                  workShifts,
-                  worker.isMinor
-                );
+                const dailyHours = isPublished
+                  ? calculateDailyHours(workShifts, worker.isMinor)
+                  : 0;
 
                 return (
                   <td
@@ -1124,7 +1130,7 @@ const PersonalScheduleRow = ({ worker, scheduleData, weekStartDate }) => {
                     className="p-1 border text-center"
                   >
                     <div className="space-y-0.5">
-                      {/* Show OFF/SWIM MEET status first */}
+                      {/* Show OFF/SWIM MEET status always */}
                       {Array.isArray(dayShifts) &&
                         dayShifts
                           .filter((s) => s.type === "OFF")
@@ -1147,8 +1153,10 @@ const PersonalScheduleRow = ({ worker, scheduleData, weekStartDate }) => {
                             SWIM MEET
                           </div>
                         )}
-                      {/* Show work shifts */}
-                      {workShifts.length > 0 &&
+
+                      {/* Show work shifts only if published */}
+                      {isPublished &&
+                        workShifts.length > 0 &&
                         workShifts
                           .sort((a, b) =>
                             (a.start || "").localeCompare(b.start || "")
@@ -1175,8 +1183,8 @@ const PersonalScheduleRow = ({ worker, scheduleData, weekStartDate }) => {
                             </div>
                           ))}
 
-                      {/* Show daily hours */}
-                      {dailyHours > 0 && (
+                      {/* Show daily hours only if published */}
+                      {isPublished && dailyHours > 0 && (
                         <div className="text-xs text-blue-600 font-medium mt-1">
                           {formatHours(dailyHours)}h
                         </div>
@@ -1196,17 +1204,21 @@ const PersonalScheduleRow = ({ worker, scheduleData, weekStartDate }) => {
                   </td>
                 );
               })}
-              <td
-                style={{
-                  width: columnWidths.total,
-                  minWidth: columnWidths.total,
-                }}
-                className={`cell-padding border text-sm font-medium text-center border-black ${
-                  weeklyTotal > 40 ? "text-red-600 bg-red-50" : "text-blue-600"
-                }`}
-              >
-                {formatHours(weeklyTotal)}
-              </td>
+              {isPublished && (
+                <td
+                  style={{
+                    width: columnWidths.total,
+                    minWidth: columnWidths.total,
+                  }}
+                  className={`cell-padding border text-sm font-medium text-center border-black ${
+                    weeklyTotal > 40
+                      ? "text-red-600 bg-red-50"
+                      : "text-blue-600"
+                  }`}
+                >
+                  {formatHours(weeklyTotal)}
+                </td>
+              )}
             </tr>
           </tbody>
         </table>
@@ -1245,6 +1257,41 @@ const ScheduleView = ({
     () => history[historyIndex] || {},
     [history, historyIndex]
   );
+
+  const isPublished = scheduleDocData?.isPublished || false;
+
+  // Create filtered schedule data for non-managers when schedule is unpublished
+  const displayScheduleData = useMemo(() => {
+    if (isManager || isPublished) {
+      return scheduleData;
+    }
+
+    // For non-managers when unpublished, only show OFF and SWIM MEET statuses
+    const filteredData = {};
+    Object.keys(scheduleData).forEach((workerId) => {
+      const workerShifts = scheduleData[workerId];
+      const filteredWorkerShifts = {};
+
+      Object.keys(workerShifts).forEach((day) => {
+        const dayShifts = workerShifts[day];
+        if (Array.isArray(dayShifts)) {
+          // Only keep OFF and SWIM MEET statuses
+          const statusShifts = dayShifts.filter(
+            (shift) => shift.type === "OFF" || shift.type === "SWIM MEET"
+          );
+          if (statusShifts.length > 0) {
+            filteredWorkerShifts[day] = statusShifts;
+          }
+        }
+      });
+
+      if (Object.keys(filteredWorkerShifts).length > 0) {
+        filteredData[workerId] = filteredWorkerShifts;
+      }
+    });
+
+    return filteredData;
+  }, [scheduleData, isManager, isPublished]);
 
   const isLocalUpdateRef = useRef(false);
 
@@ -1379,7 +1426,7 @@ const ScheduleView = ({
         ? docData.shifts || {}
         : docData.isPublished
         ? docData.publishedShifts || {}
-        : {};
+        : docData.shifts || {}; // Allow non-managers to see all shifts (filtering happens in displayScheduleData)
 
       if (deepEqual(shiftsForView, history[historyIndex])) {
         setLoading(false);
@@ -1416,8 +1463,6 @@ const ScheduleView = ({
 
     return () => unsubscribe();
   }, [scheduleDocId, isManager, workers, company, weekStartDate]);
-
-  const isPublished = scheduleDocData?.isPublished || false;
 
   const hasUnpublishedChanges = useMemo(() => {
     if (!isManager || !isPublished || !scheduleDocData) {
@@ -2151,18 +2196,19 @@ const ScheduleView = ({
       {/* No Schedule Published Message */}
       {!isManager && !loading && !isPublished && (
         <div className="text-center p-8 ">
-          <p className="text-gray-600">
+          <p className="text-red-600">
             The schedule for this week has not been published yet.
           </p>
         </div>
       )}
 
       {/* Personal Schedule Row for Current Worker */}
-      {!isManager && isPublished && currentUserId && (
+      {!isManager && currentUserId && (
         <PersonalScheduleRow
           worker={workers.find((w) => w.uid === currentUserId)}
-          scheduleData={scheduleData}
+          scheduleData={displayScheduleData}
           weekStartDate={weekStartDate}
+          isPublished={isPublished}
         />
       )}
 
@@ -2235,7 +2281,7 @@ const ScheduleView = ({
                 <WorkerRow
                   key={worker.uid}
                   worker={worker}
-                  scheduleData={scheduleData}
+                  scheduleData={displayScheduleData}
                   onWorkerClick={setSelectedWorker}
                   hoveredCell={hoveredCell}
                   popoverTarget={popoverTarget}
@@ -2292,7 +2338,7 @@ const ScheduleView = ({
                   <WorkerRow
                     key={worker.uid}
                     worker={worker}
-                    scheduleData={scheduleData}
+                    scheduleData={displayScheduleData}
                     onWorkerClick={isManager ? setSelectedWorker : () => {}}
                     hoveredCell={hoveredCell}
                     popoverTarget={popoverTarget}

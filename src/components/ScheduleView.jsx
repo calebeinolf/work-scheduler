@@ -9,6 +9,7 @@ import {
   deleteDoc,
   writeBatch,
 } from "firebase/firestore";
+import { useLocation, useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import EditWorkerModal from "./EditWorkerModal";
 import {
@@ -1498,7 +1499,24 @@ const ScheduleView = ({
   isManager = true,
   currentUserId,
 }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const getInitialDateFromHash = () => {
+    const hash = window.location.hash.substring(1);
+    if (hash && /^\d{8}$/.test(hash)) {
+      const month = parseInt(hash.substring(0, 2), 10) - 1;
+      const day = parseInt(hash.substring(2, 4), 10);
+      const year = parseInt(hash.substring(4, 8), 10);
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    return new Date();
+  };
+
+  const [currentDate, setCurrentDate] = useState(getInitialDateFromHash);
   const [loading, setLoading] = useState(true);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [editingWorker, setEditingWorker] = useState(null);
@@ -1579,6 +1597,29 @@ const ScheduleView = ({
     () => getSundayOfWeek(currentDate),
     [currentDate]
   );
+
+  // Update URL hash when weekStartDate changes
+  useEffect(() => {
+    const month = String(weekStartDate.getMonth() + 1).padStart(2, "0");
+    const day = String(weekStartDate.getDate()).padStart(2, "0");
+    const year = weekStartDate.getFullYear();
+    const newHash = `#${month}${day}${year}`;
+    if (location.hash !== newHash) {
+      navigate({ hash: newHash }, { replace: true });
+    }
+  }, [weekStartDate, navigate, location.hash]);
+
+  // Listen for hash changes (e.g., browser back/forward)
+  useEffect(() => {
+    const handleHashChange = () => {
+      setCurrentDate(getInitialDateFromHash());
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { sortedManagersAndGuards, sortedFrontWorkers } = useMemo(() => {
     const titleOrder = {

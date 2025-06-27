@@ -58,7 +58,7 @@ const CreateCompanyPage = () => {
         yos: parseInt(yos, 10),
       });
 
-      navigate("/dashboard");
+      navigate("/schedule");
     } catch (err) {
       setError(err.message);
       console.error("Error creating company:", err);

@@ -77,7 +77,7 @@ const JoinCompanyPage = () => {
 
       // 5. Sign in the new user to create a session and navigate to dashboard
       await signInWithEmailAndPassword(auth, email, password);
-      navigate("/dashboard");
+      navigate("/schedule");
     } catch (err) {
       setError(err.message);
       console.error("Error joining company:", err);

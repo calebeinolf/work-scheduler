@@ -38,7 +38,7 @@ const Login = () => {
       if (!querySnapshot.empty) {
         // A profile exists for this user (they are a manager or have claimed a profile).
         // Send them to the dashboard.
-        navigate("/dashboard");
+        navigate("/schedule");
       } else {
         // No profile found. This auth account hasn't been linked.
         // Send them to role selection to start the process.

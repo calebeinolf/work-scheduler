@@ -28,7 +28,7 @@ const HomePage = () => {
   }, []); // The empty array ensures this effect runs only once.
 
   // Determine where the "Log In" button should lead.
-  const loginDestination = authStatus === "loggedIn" ? "/dashboard" : "/login";
+  const loginDestination = authStatus === "loggedIn" ? "/schedule" : "/login";
 
   return (
     <div className="min-h-screen ">

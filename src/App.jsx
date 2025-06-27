@@ -30,7 +30,7 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/create-company" element={<CreateCompanyPage />} />
         <Route path="/join-company" element={<JoinCompanyPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/schedule" element={<Dashboard />} />
 
         {/* Fallback route - could redirect to landing or a 404 page */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -43,7 +43,7 @@ const WorkerSetup = () => {
         yos: parseInt(yos, 10), // Save yos as a number
       });
 
-      navigate("/dashboard");
+      navigate("/schedule");
     } catch (err) {
       setError("Failed to save your details. Please try again.");
       console.error("Error updating worker details:", err);

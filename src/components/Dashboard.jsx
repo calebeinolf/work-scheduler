@@ -98,6 +98,8 @@ const Dashboard = () => {
 
   const handleLogout = async () => {
     await signOut(auth);
+    // Clear the hash to prevent it from being used on the login page or by the next user
+    window.location.hash = "";
     navigate("/login");
   };
 

@@ -582,7 +582,7 @@ const WorkerDetailModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
-          <h3 className="text-2xl font-bold text-gray-800">
+          <h3 className="text-2xl font-semibold text-gray-800">
             {worker.fullName}
           </h3>
           {isManager && (
@@ -999,6 +999,222 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
           <span className="text-xs">Esc</span>
         </button>
       )}
+    </div>
+  );
+};
+
+// --- Personal Schedule Row Component for Current Worker ---
+const PersonalScheduleRow = ({ worker, scheduleData, weekStartDate }) => {
+  if (!worker) return null;
+
+  const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const displayDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const headerDates = [];
+  for (let i = 0; i < 7; i++) {
+    const dayDate = new Date(weekStartDate);
+    dayDate.setDate(dayDate.getDate() + i);
+    headerDates.push(
+      `${displayDays[i]} ${dayDate.getMonth() + 1}/${dayDate.getDate()}`
+    );
+  }
+
+  const weeklyShifts = scheduleData[worker.uid];
+  const weeklyTotal = useMemo(() => {
+    if (!weeklyShifts) return 0;
+    let totalHours = 0;
+    Object.values(weeklyShifts).forEach((dayShifts) => {
+      const workShifts = Array.isArray(dayShifts)
+        ? dayShifts.filter((s) => s.type !== "OFF" && s.type !== "SWIM MEET")
+        : [];
+      totalHours += calculateDailyHours(workShifts, worker.isMinor);
+    });
+    return totalHours;
+  }, [weeklyShifts, worker.isMinor]);
+
+  const formatHours = (num) => {
+    if (num % 1 === 0) return num.toString();
+    if ((num * 10) % 1 === 0) return num.toFixed(1);
+    return num.toFixed(2).replace(/\.?0+$/, "");
+  };
+
+  const shouldShowShiftType = (shift, worker) => {
+    if (!shift || !worker || !shift.type || !worker.title) return false;
+    if (shift.type === "LESSONS") return true;
+    if (shift.type === "CAMP") return true;
+    if (worker.title.includes("Lifeguard") && shift.type === "GUARD")
+      return false;
+    if (worker.title.includes("Front") && shift.type === "FRONT") return false;
+    return true;
+  };
+
+  const getShiftHighlightClass = (shift) => {
+    if (shift.type === "LESSONS") return "";
+    const category = getShiftCategory(shift);
+    switch (category) {
+      case "All Day":
+        return "bg-green-200/80";
+      case "Opening":
+        return "bg-yellow-200/80";
+      case "Closing":
+        return "bg-purple-200/80";
+      default:
+        return "";
+    }
+  };
+
+  return (
+    <div className="">
+      <div className=" px-4 py-2">
+        <h3 className="text-lg font-semibold">Your Schedule</h3>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table
+          className="w-full border-collapse"
+          style={{ tableLayout: "fixed" }}
+        >
+          {/* Header Row */}
+          <thead>
+            <tr className="bg-gray-100">
+              {days.map((dayKey, i) => (
+                <th
+                  key={dayKey}
+                  style={{
+                    width: columnWidths.day,
+                    minWidth: columnWidths.day,
+                  }}
+                  className="header-cell-padding border text-xs font-semibold  text-center"
+                >
+                  {headerDates[i]}
+                </th>
+              ))}
+              <th
+                style={{
+                  width: columnWidths.total,
+                  minWidth: columnWidths.total,
+                }}
+                className="header-cell-padding border text-xs font-semibold  text-center"
+              >
+                Hours
+              </th>
+            </tr>
+          </thead>
+          {/* Schedule Row */}
+          <tbody>
+            <tr className="bg-white">
+              {days.map((day) => {
+                const dayShifts = weeklyShifts?.[day];
+                const workShifts = Array.isArray(dayShifts)
+                  ? dayShifts.filter(
+                      (s) => s.type !== "OFF" && s.type !== "SWIM MEET"
+                    )
+                  : [];
+                const dailyHours = calculateDailyHours(
+                  workShifts,
+                  worker.isMinor
+                );
+
+                return (
+                  <td
+                    key={day}
+                    style={{
+                      width: columnWidths.day,
+                      minWidth: columnWidths.day,
+                    }}
+                    className="p-1 border text-center"
+                  >
+                    <div className="space-y-0.5">
+                      {/* Show OFF/SWIM MEET status first */}
+                      {Array.isArray(dayShifts) &&
+                        dayShifts
+                          .filter((s) => s.type === "OFF")
+                          .map((offShift, index) => (
+                            <div
+                              key={`off-${index}`}
+                              className="text-xs text-red-500 font-medium"
+                            >
+                              {offShift.start && offShift.end
+                                ? `OFF ${formatTime12hr(
+                                    offShift.start
+                                  )}-${formatTime12hr(offShift.end)}`
+                                : "OFF"}
+                            </div>
+                          ))}
+                      {Array.isArray(dayShifts) &&
+                        dayShifts.filter((s) => s.type === "SWIM MEET").length >
+                          0 && (
+                          <div className="text-xs text-orange-500 font-medium">
+                            SWIM MEET
+                          </div>
+                        )}
+                      {/* Show work shifts */}
+                      {workShifts.length > 0 &&
+                        workShifts
+                          .sort((a, b) =>
+                            (a.start || "").localeCompare(b.start || "")
+                          )
+                          .map((shift, index) => (
+                            <div
+                              key={index}
+                              className={`text-xs rounded-md p-0.5 flex items-center gap-1 justify-center text-nowrap ${getShiftHighlightClass(
+                                shift
+                              )}`}
+                            >
+                              <div className="font-medium">{`${formatTime12hr(
+                                shift.start
+                              )}-${formatTime12hr(shift.end)}`}</div>
+                              {shouldShowShiftType(shift, worker) && (
+                                <div className="text-gray-500 text-xs">
+                                  {shift.type === "CAMP"
+                                    ? "(C)"
+                                    : shift.type === "LESSONS"
+                                    ? "(L)"
+                                    : `(${shift.type[0]})`}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                      {/* Show daily hours */}
+                      {dailyHours > 0 && (
+                        <div className="text-xs text-blue-600 font-medium mt-1">
+                          {formatHours(dailyHours)}h
+                        </div>
+                      )}
+
+                      {/* If nothing at all, show dash */}
+                      {!(
+                        (Array.isArray(dayShifts) &&
+                          (dayShifts.length > 0 ||
+                            workShifts.length > 0 ||
+                            dayShifts.some(
+                              (s) => s.type === "OFF" || s.type === "SWIM MEET"
+                            ))) ||
+                        dailyHours > 0
+                      ) && <span className="text-gray-400">-</span>}
+                    </div>
+                  </td>
+                );
+              })}
+              <td
+                style={{
+                  width: columnWidths.total,
+                  minWidth: columnWidths.total,
+                }}
+                className={`cell-padding border text-sm font-medium text-center border-black ${
+                  weeklyTotal > 40 ? "text-red-600 bg-red-50" : "text-blue-600"
+                }`}
+              >
+                {formatHours(weeklyTotal)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className=" px-4 py-2 mt-4">
+        <h3 className="text-lg font-semibold">Full Schedule</h3>
+      </div>
     </div>
   );
 };
@@ -1569,11 +1785,11 @@ const ScheduleView = ({
           >
             <div>{headerDates[i]}</div>
             <div className="flex items-center justify-center gap-3">
-              <div className="text-blue-600 font-bold text-xs">
+              <div className="text-blue-600 font-semibold text-xs">
                 {dailyStaffCounts[dayKey]?.GUARD || "0"}{" "}
                 <span className="font-medium"> G</span>
               </div>
-              <div className="text-green-600 font-bold text-xs">
+              <div className="text-green-600 font-semibold text-xs">
                 {dailyStaffCounts[dayKey]?.FRONT || "0"}{" "}
                 <span className="font-medium"> F</span>
               </div>
@@ -1713,7 +1929,7 @@ const ScheduleView = ({
         .section-header { 
           font-size: 10px; 
           color: #6b7280;
-          font-weight: bold; 
+          font-weight: semibold; 
           padding: 3px; 
           background-color: #f3f4f6; 
           border-bottom: 1px solid #e5e7eb;
@@ -1722,7 +1938,7 @@ const ScheduleView = ({
         </style>
       </head>
       <body>
-        <p style="text-align:center; font-weight: bold; margin: 0; margin-bottom: 4px">Schedule for ${formatWeekRange(
+        <p style="text-align:center; font-weight: semibold; margin: 0; margin-bottom: 4px">Schedule for ${formatWeekRange(
           weekStartDate,
           weekEndDateForPrint
         )}</p>
@@ -1932,14 +2148,22 @@ const ScheduleView = ({
           </button>
         </div>
       </div>
-
       {/* No Schedule Published Message */}
       {!isManager && !loading && !isPublished && (
-        <div className="text-center p-8 bg-gray-50 rounded-lg">
+        <div className="text-center p-8 ">
           <p className="text-gray-600">
             The schedule for this week has not been published yet.
           </p>
         </div>
+      )}
+
+      {/* Personal Schedule Row for Current Worker */}
+      {!isManager && isPublished && currentUserId && (
+        <PersonalScheduleRow
+          worker={workers.find((w) => w.uid === currentUserId)}
+          scheduleData={scheduleData}
+          weekStartDate={weekStartDate}
+        />
       )}
 
       {/* Header */}
@@ -1990,30 +2214,86 @@ const ScheduleView = ({
       </div>
 
       {/* Schedule Table */}
-      {((isManager && !loading) || (!isManager && isPublished)) && (
-        <div className="overflow-x-auto" ref={mainContentRef}>
-          <table
-            ref={tableRef}
-            className="w-full border-collapse border"
-            style={{ tableLayout: "fixed" }}
-            onMouseLeave={() => {
-              setHoveredCell({ row: null, col: null });
-            }}
-          >
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={11} className="text-center p-4">
-                    Loading schedule...
+      <div className="overflow-x-auto" ref={mainContentRef}>
+        <table
+          ref={tableRef}
+          className="w-full border-collapse border"
+          style={{ tableLayout: "fixed" }}
+          onMouseLeave={() => {
+            setHoveredCell({ row: null, col: null });
+          }}
+        >
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={11} className="text-center p-4">
+                  Loading schedule...
+                </td>
+              </tr>
+            ) : (
+              sortedManagersAndGuards.map((worker) => (
+                <WorkerRow
+                  key={worker.uid}
+                  worker={worker}
+                  scheduleData={scheduleData}
+                  onWorkerClick={setSelectedWorker}
+                  hoveredCell={hoveredCell}
+                  popoverTarget={popoverTarget}
+                  onCellEnter={setHoveredCell}
+                  onCellClick={isManager ? handleCellClick : () => {}}
+                  revealedHoursWorkerId={revealedHoursWorkerId}
+                  onRevealHoursStart={handleRevealHoursStart}
+                  onRevealHoursEnd={handleRevealHoursEnd}
+                  isSelected={selectedWorkers.includes(worker.uid)}
+                  onToggleSelect={handleToggleSelectWorker}
+                  isManager={isManager}
+                  currentUserId={currentUserId}
+                />
+              ))
+            )}
+          </tbody>
+          {sortedFrontWorkers.length > 0 && (
+            <>
+              <tbody>
+                <tr className="bg-gray-100 text-center">
+                  {isManager && (
+                    <td
+                      style={{
+                        width: columnWidths.checkbox,
+                        minWidth: columnWidths.checkbox,
+                      }}
+                      className="p-2 border"
+                    >
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        onChange={(e) =>
+                          handleToggleSelectAll(e, sortedFrontWorkers)
+                        }
+                        checked={
+                          sortedFrontWorkers.length > 0 &&
+                          sortedFrontWorkers.every((fw) =>
+                            selectedWorkers.includes(fw.uid)
+                          )
+                        }
+                      />
+                    </td>
+                  )}
+                  <td
+                    colSpan={isManager ? 10 : 9}
+                    className={`p-2 border text-left text-xs font-semibold text-gray-600`}
+                  >
+                    Front Workers
                   </td>
                 </tr>
-              ) : (
-                sortedManagersAndGuards.map((worker) => (
+              </tbody>
+              <tbody>
+                {sortedFrontWorkers.map((worker) => (
                   <WorkerRow
                     key={worker.uid}
                     worker={worker}
                     scheduleData={scheduleData}
-                    onWorkerClick={setSelectedWorker}
+                    onWorkerClick={isManager ? setSelectedWorker : () => {}}
                     hoveredCell={hoveredCell}
                     popoverTarget={popoverTarget}
                     onCellEnter={setHoveredCell}
@@ -2026,70 +2306,12 @@ const ScheduleView = ({
                     isManager={isManager}
                     currentUserId={currentUserId}
                   />
-                ))
-              )}
-            </tbody>
-            {sortedFrontWorkers.length > 0 && (
-              <>
-                <tbody>
-                  <tr className="bg-gray-100 text-center">
-                    {isManager && (
-                      <td
-                        style={{
-                          width: columnWidths.checkbox,
-                          minWidth: columnWidths.checkbox,
-                        }}
-                        className="p-2 border"
-                      >
-                        <input
-                          type="checkbox"
-                          className="rounded"
-                          onChange={(e) =>
-                            handleToggleSelectAll(e, sortedFrontWorkers)
-                          }
-                          checked={
-                            sortedFrontWorkers.length > 0 &&
-                            sortedFrontWorkers.every((fw) =>
-                              selectedWorkers.includes(fw.uid)
-                            )
-                          }
-                        />
-                      </td>
-                    )}
-                    <td
-                      colSpan={isManager ? 10 : 9}
-                      className={`p-2 border text-left text-xs font-semibold text-gray-600`}
-                    >
-                      Front Workers
-                    </td>
-                  </tr>
-                </tbody>
-                <tbody>
-                  {sortedFrontWorkers.map((worker) => (
-                    <WorkerRow
-                      key={worker.uid}
-                      worker={worker}
-                      scheduleData={scheduleData}
-                      onWorkerClick={isManager ? setSelectedWorker : () => {}}
-                      hoveredCell={hoveredCell}
-                      popoverTarget={popoverTarget}
-                      onCellEnter={setHoveredCell}
-                      onCellClick={isManager ? handleCellClick : () => {}}
-                      revealedHoursWorkerId={revealedHoursWorkerId}
-                      onRevealHoursStart={handleRevealHoursStart}
-                      onRevealHoursEnd={handleRevealHoursEnd}
-                      isSelected={selectedWorkers.includes(worker.uid)}
-                      onToggleSelect={handleToggleSelectWorker}
-                      isManager={isManager}
-                      currentUserId={currentUserId}
-                    />
-                  ))}
-                </tbody>
-              </>
-            )}
-          </table>
-        </div>
-      )}
+                ))}
+              </tbody>
+            </>
+          )}
+        </table>
+      </div>
 
       {/* Key */}
       <div className="w-full mt-8 mb-2 flex flex-wrap gap-4 items-center justify-center text-xs text-gray-600">
@@ -2109,7 +2331,6 @@ const ScheduleView = ({
           <span className="font-semibold text-gray-800">(C)</span> Camp
         </span>
       </div>
-
       {/* Floating Easy Add Toolbar */}
       {isManager && (
         <EasyAddToolbar

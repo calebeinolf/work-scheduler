@@ -16,6 +16,7 @@ import ManagerDashboard from "../components/ManagerDashboard";
 import WorkerDashboard from "../components/WorkerDashboard";
 import { LogOut } from "lucide-react";
 import Loader from "../assets/Loader";
+import wdiwFavicon from "../assets/wdiw-favicon.svg";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -138,9 +139,12 @@ const Dashboard = () => {
     <div className="min-h-screen">
       <header className="bg-white shadow-sm px-6 py-2">
         <nav className="max-w-6xl mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-blue-600">
-            {companyData ? companyData.name : "Scheduler"}
-          </h1>
+          <div className="flex items-center gap-3">
+            <img src={wdiwFavicon} alt="Company Logo" className="w-6 h-6" />
+            <h1 className="text-lg font-semibold text-blue-600">
+              {companyData ? companyData.name : ""}
+            </h1>
+          </div>
 
           <div className="flex items-center gap-4">
             {userData && (

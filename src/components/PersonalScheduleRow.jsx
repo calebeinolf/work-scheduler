@@ -15,6 +15,7 @@ const PersonalScheduleRow = ({
   scheduleData,
   weekStartDate,
   isPublished,
+  scheduleLoading = false,
 }) => {
   if (!worker) return null;
 
@@ -68,7 +69,7 @@ const PersonalScheduleRow = ({
                   {headerDates[i]}
                 </th>
               ))}
-              {isPublished && (
+              {(isPublished || scheduleLoading) && (
                 <th
                   style={{
                     width: columnWidths.total,
@@ -84,7 +85,33 @@ const PersonalScheduleRow = ({
           {/* Schedule Row */}
           <tbody>
             <tr className="bg-white">
-              {days.map((day) => {
+              {days.map((day, dayIndex) => {
+                if (scheduleLoading) {
+                  // Show skeleton loading for each day cell
+                  return (
+                    <td
+                      key={day}
+                      style={{
+                        width: columnWidths.day,
+                        minWidth: columnWidths.day,
+                      }}
+                      className="p-1 border text-center"
+                    >
+                      <div className="space-y-1">
+                        <div
+                          className="h-4 bg-gray-200 rounded animate-pulse mx-2"
+                          style={{ animationDelay: `${dayIndex * 50}ms` }}
+                        ></div>
+                        <div
+                          className="h-3 bg-gray-200 rounded animate-pulse mx-3"
+                          style={{ animationDelay: `${dayIndex * 50 + 100}ms` }}
+                        ></div>
+                      </div>
+                    </td>
+                  );
+                }
+
+                // Original cell rendering logic
                 const dayShifts = weeklyShifts?.[day];
                 const workShifts = Array.isArray(dayShifts)
                   ? dayShifts.filter(
@@ -179,19 +206,26 @@ const PersonalScheduleRow = ({
                   </td>
                 );
               })}
-              {isPublished && (
+              {(isPublished || scheduleLoading) && (
                 <td
                   style={{
                     width: columnWidths.total,
                     minWidth: columnWidths.total,
                   }}
                   className={`cell-padding border text-sm font-medium text-center border-black ${
-                    weeklyTotal > 40
+                    !scheduleLoading && weeklyTotal > 40
                       ? "text-red-600 bg-red-50"
                       : "text-blue-600"
                   }`}
                 >
-                  {formatHours(weeklyTotal)}
+                  {scheduleLoading ? (
+                    <div
+                      className="h-4 w-8 bg-gray-200 rounded animate-pulse mx-auto"
+                      style={{ animationDelay: "400ms" }}
+                    ></div>
+                  ) : (
+                    formatHours(weeklyTotal)
+                  )}
                 </td>
               )}
             </tr>

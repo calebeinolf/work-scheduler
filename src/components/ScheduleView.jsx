@@ -24,6 +24,7 @@ import PersonalScheduleRow from "./PersonalScheduleRow";
 import BulkActionsBar from "./BulkActionsBar";
 import EasyAddToolbar from "./EasyAddToolbar";
 import FloatingPresetChip from "./FloatingPresetChip";
+import SkeletonWorkerRow from "./SkeletonWorkerRow";
 import {
   ArrowLeft,
   ArrowRight,
@@ -68,7 +69,7 @@ const ScheduleView = ({
   };
 
   const [currentDate, setCurrentDate] = useState(getInitialDateFromHash);
-  const [loading, setLoading] = useState(true);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [editingWorker, setEditingWorker] = useState(null);
   const [hoveredCell, setHoveredCell] = useState({ row: null, col: null });
@@ -270,7 +271,7 @@ const ScheduleView = ({
 
       if (isLocalUpdateRef.current && isManager) {
         isLocalUpdateRef.current = false;
-        setLoading(false);
+        setScheduleLoading(false);
         return;
       }
 
@@ -281,7 +282,7 @@ const ScheduleView = ({
         : docData.shifts || {};
 
       if (deepEqual(shiftsForView, history[historyIndex])) {
-        setLoading(false);
+        setScheduleLoading(false);
         return;
       }
 
@@ -320,7 +321,7 @@ const ScheduleView = ({
 
       setHistory([updatedShifts]);
       setHistoryIndex(0);
-      setLoading(false);
+      setScheduleLoading(false);
     });
 
     return () => unsubscribe();
@@ -929,7 +930,12 @@ const ScheduleView = ({
     const topScrollbarEl = topScrollbarRef.current;
     const headerContainerEl = headerContainerRef.current;
 
-    if (!mainContentEl || !topScrollbarEl || !headerContainerEl || loading)
+    if (
+      !mainContentEl ||
+      !topScrollbarEl ||
+      !headerContainerEl ||
+      scheduleLoading
+    )
       return;
 
     const topScrollbarContent = topScrollbarEl.querySelector("div");
@@ -978,7 +984,7 @@ const ScheduleView = ({
         topScrollbarEl.removeEventListener("scroll", handleTopScroll);
       }
     };
-  }, [scheduleData, workers, loading]); // Rerun when data or loading state changes
+  }, [scheduleData, workers, scheduleLoading]); // Rerun when data or loading state changes
   // --- END: Dual Scrollbar Logic ---
 
   // Function to apply OFF rules to a schedule for all workers
@@ -1107,7 +1113,7 @@ const ScheduleView = ({
         </div>
       </div>
       {/* No Schedule Published Message */}
-      {!isManager && !loading && !isPublished && (
+      {!isManager && !scheduleLoading && !isPublished && (
         <div className="text-center p-8 ">
           <p className="text-red-600">
             The schedule for this week has not been published yet.
@@ -1122,6 +1128,7 @@ const ScheduleView = ({
           scheduleData={displayScheduleData}
           weekStartDate={weekStartDate}
           isPublished={isPublished}
+          scheduleLoading={scheduleLoading}
         />
       )}
 
@@ -1185,25 +1192,17 @@ const ScheduleView = ({
           }}
         >
           <tbody>
-            {loading ? (
-              // Reserve proper space for loading state to prevent CLS
+            {scheduleLoading ? (
+              // Show skeleton rows while schedule data loads
               <>
-                <tr>
-                  <td
-                    colSpan={isManager ? 11 : 10}
-                    className="loading-placeholder text-center p-4"
-                  ></td>
-                </tr>
-                {/* Add placeholder rows to maintain consistent height */}
-                {Array.from({ length: Math.max(5, workers.length) }).map(
+                {Array.from({ length: Math.max(5, workers.length || 8) }).map(
                   (_, index) => (
-                    <tr
-                      key={`placeholder-${index}`}
-                      className="schedule-cell"
-                      style={{ height: "48px", opacity: 0 }}
-                    >
-                      <td colSpan={isManager ? 11 : 10}>&nbsp;</td>
-                    </tr>
+                    <SkeletonWorkerRow
+                      key={`skeleton-${index}`}
+                      isManager={isManager}
+                      showCheckbox={true}
+                      index={index}
+                    />
                   )
                 )}
               </>
@@ -1229,7 +1228,7 @@ const ScheduleView = ({
               ))
             )}
           </tbody>
-          {sortedFrontWorkers.length > 0 && (
+          {(sortedFrontWorkers.length > 0 || scheduleLoading) && (
             <>
               <tbody>
                 <tr className="bg-gray-100 text-center">
@@ -1241,19 +1240,23 @@ const ScheduleView = ({
                       }}
                       className="p-2 border"
                     >
-                      <input
-                        type="checkbox"
-                        className="rounded"
-                        onChange={(e) =>
-                          handleToggleSelectAll(e, sortedFrontWorkers)
-                        }
-                        checked={
-                          sortedFrontWorkers.length > 0 &&
-                          sortedFrontWorkers.every((fw) =>
-                            selectedWorkers.includes(fw.uid)
-                          )
-                        }
-                      />
+                      {scheduleLoading ? (
+                        <div className="w-4 h-4 bg-gray-200 rounded animate-pulse mx-auto"></div>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          onChange={(e) =>
+                            handleToggleSelectAll(e, sortedFrontWorkers)
+                          }
+                          checked={
+                            sortedFrontWorkers.length > 0 &&
+                            sortedFrontWorkers.every((fw) =>
+                              selectedWorkers.includes(fw.uid)
+                            )
+                          }
+                        />
+                      )}
                     </td>
                   )}
                   <td
@@ -1265,25 +1268,39 @@ const ScheduleView = ({
                 </tr>
               </tbody>
               <tbody>
-                {sortedFrontWorkers.map((worker) => (
-                  <WorkerRow
-                    key={worker.uid}
-                    worker={worker}
-                    scheduleData={displayScheduleData}
-                    onWorkerClick={isManager ? setSelectedWorker : () => {}}
-                    hoveredCell={hoveredCell}
-                    popoverTarget={popoverTarget}
-                    onCellEnter={setHoveredCell}
-                    onCellClick={isManager ? handleCellClick : () => {}}
-                    revealedHoursWorkerId={revealedHoursWorkerId}
-                    onRevealHoursStart={handleRevealHoursStart}
-                    onRevealHoursEnd={handleRevealHoursEnd}
-                    isSelected={selectedWorkers.includes(worker.uid)}
-                    onToggleSelect={handleToggleSelectWorker}
-                    isManager={isManager}
-                    currentUserId={currentUserId}
-                  />
-                ))}
+                {scheduleLoading ? (
+                  // Show skeleton rows for front workers during loading
+                  <>
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <SkeletonWorkerRow
+                        key={`skeleton-front-${index}`}
+                        isManager={isManager}
+                        showCheckbox={true}
+                        index={index + 10} // Offset to get different variations
+                      />
+                    ))}
+                  </>
+                ) : (
+                  sortedFrontWorkers.map((worker) => (
+                    <WorkerRow
+                      key={worker.uid}
+                      worker={worker}
+                      scheduleData={displayScheduleData}
+                      onWorkerClick={isManager ? setSelectedWorker : () => {}}
+                      hoveredCell={hoveredCell}
+                      popoverTarget={popoverTarget}
+                      onCellEnter={setHoveredCell}
+                      onCellClick={isManager ? handleCellClick : () => {}}
+                      revealedHoursWorkerId={revealedHoursWorkerId}
+                      onRevealHoursStart={handleRevealHoursStart}
+                      onRevealHoursEnd={handleRevealHoursEnd}
+                      isSelected={selectedWorkers.includes(worker.uid)}
+                      onToggleSelect={handleToggleSelectWorker}
+                      isManager={isManager}
+                      currentUserId={currentUserId}
+                    />
+                  ))
+                )}
               </tbody>
             </>
           )}

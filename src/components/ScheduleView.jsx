@@ -289,6 +289,15 @@ const ScheduleView = ({
             needsUpdate = true;
           }
         });
+
+        // Apply OFF rules to new schedules
+        if (needsUpdate) {
+          const shiftsWithOffRules = applyOffRulesToSchedule(
+            updatedShifts,
+            weekStartDate
+          );
+          Object.assign(updatedShifts, shiftsWithOffRules);
+        }
       }
 
       if (needsUpdate) {
@@ -967,6 +976,49 @@ const ScheduleView = ({
   }, [scheduleData, workers, loading]); // Rerun when data or loading state changes
   // --- END: Dual Scrollbar Logic ---
 
+  // Function to apply OFF rules to a schedule for all workers
+  const applyOffRulesToSchedule = (shiftsData, scheduleWeekStartDate) => {
+    const daysOfWeek = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const updatedShifts = { ...shiftsData };
+
+    workers.forEach((worker) => {
+      const offRules = worker.offRules || [];
+      if (offRules.length === 0) return;
+
+      if (!updatedShifts[worker.uid]) {
+        updatedShifts[worker.uid] = {};
+      }
+
+      offRules.forEach((rule) => {
+        const currentShifts = updatedShifts[worker.uid][rule.day] || [];
+
+        // Remove any existing OFF shifts created by this rule to avoid duplicates
+        const filteredShifts = Array.isArray(currentShifts)
+          ? currentShifts.filter(
+              (shift) => !(shift.type === "OFF" && shift.ruleId === rule.id)
+            )
+          : [];
+
+        // Add the OFF rule
+        const offShift = {
+          type: "OFF",
+          isRule: true,
+          ruleId: rule.id,
+        };
+
+        if (!rule.allDay) {
+          offShift.start = rule.startTime;
+          offShift.end = rule.endTime;
+        }
+
+        filteredShifts.push(offShift);
+        updatedShifts[worker.uid][rule.day] = filteredShifts;
+      });
+    });
+
+    return updatedShifts;
+  };
+
   return (
     <div className="pb-24">
       <style>{`
@@ -978,6 +1030,7 @@ const ScheduleView = ({
       )}
       <WorkerDetailModal
         worker={selectedWorker}
+        company={company}
         onClose={() => setSelectedWorker(null)}
         onEdit={handleOpenEditModal}
         onDelete={handleDeleteWorker}

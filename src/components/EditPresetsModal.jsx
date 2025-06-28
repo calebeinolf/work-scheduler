@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import { Trash2 } from "lucide-react";
 
 const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
   const [presets, setPresets] = useState([]);
@@ -141,20 +142,29 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
     <div
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
       onClick={onClose}
+      style={{ overflowY: "auto" }}
     >
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl "
+        className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6">
-          <h3 className="text-2xl font-bold text-gray-800 mb-4">
+        <div className="p-6 border-b border-gray-200 shrink-0">
+          <h3 className="text-2xl font-bold text-gray-800">
             Edit Shift Presets
           </h3>
-          {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-          <div
-            ref={scrollContainerRef}
-            className="space-y-4 max-h-[60vh] overflow-y-auto pr-4"
-          >
+          <p className="text-sm text-gray-600 mt-1">
+            Create and manage shift time presets for quick scheduling.
+          </p>
+        </div>
+
+        <div className="p-6 overflow-y-auto grow">
+          {error && (
+            <div className="bg-red-100 text-red-700 p-3 rounded-md mb-4">
+              {error}
+            </div>
+          )}
+
+          <div ref={scrollContainerRef} className="space-y-4">
             {loading ? (
               <p>Loading presets...</p>
             ) : (
@@ -173,6 +183,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       onClick={() => handleReorder(index, "top")}
                       disabled={index === 0}
                       className="p-1 text-gray-400 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Move to top"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -194,6 +205,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       onClick={() => handleReorder(index, "up")}
                       disabled={index === 0}
                       className="p-1 text-gray-400 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Move up"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -215,6 +227,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       onClick={() => handleReorder(index, "down")}
                       disabled={index === presets.length - 1}
                       className="p-1 text-gray-400 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Move down"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -236,6 +249,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       onClick={() => handleReorder(index, "bottom")}
                       disabled={index === presets.length - 1}
                       className="p-1 text-gray-400 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Move to bottom"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -302,13 +316,15 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                   <button
                     onClick={() => removePreset(preset.id)}
                     className="ml-auto text-red-500 hover:text-red-700 text-xl self-start"
+                    title="Delete Preset"
                   >
-                    &times;
+                    <Trash2 size={16} />
                   </button>
                 </div>
               ))
             )}
           </div>
+
           <button
             onClick={addPreset}
             className="mt-4 w-full p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md"
@@ -316,11 +332,13 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
             + Add New Preset
           </button>
         </div>
-        <div className="bg-gray-50 border-t border-gray-200 p-3 flex justify-end space-x-3 rounded-b-lg">
+
+        <div className="bg-gray-50 border-t border-gray-200 p-4 flex justify-end space-x-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
             className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+            disabled={loading}
           >
             Cancel
           </button>

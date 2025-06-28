@@ -47,7 +47,7 @@ const WorkerDashboard = ({ user, company }) => {
 
         {/* <div className="text-right flex gap-2 flex-wrap justify-end">
           <div className="flex gap-2">
-            <button className="w-full bg-red-500 hover:bg-red-600 text-white font-medium text-nowrap py-1 px-3 rounded-lg text-sm focus:outline-none focus:shadow-outline transition duration-200">
+            <button className="w-full bg-red-500 hover:bg-red-600 text-white font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200">
               Request OFF
             </button>
           </div>

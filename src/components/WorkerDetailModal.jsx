@@ -1,21 +1,30 @@
 // src/components/WorkerDetailModal.jsx
 
-import React from "react";
+import React, { useState } from "react";
 import { Pencil, Calendar } from "lucide-react";
+import OffRulesModal from "./OffRulesModal";
 
 const WorkerDetailModal = ({
   worker,
+  company,
   onClose,
   onEdit,
   onDelete,
   isManager,
 }) => {
+  const [isOffRulesModalOpen, setIsOffRulesModalOpen] = useState(false);
   if (!worker) return null;
 
   return (
     <>
+      <OffRulesModal
+        worker={worker}
+        company={company}
+        isOpen={isOffRulesModalOpen}
+        onClose={() => setIsOffRulesModalOpen(false)}
+      />
       <div
-        className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        className="fixed inset-0 bg-black/60 flex items-center justify-center z-40 p-4"
         onClick={onClose}
       >
         <div
@@ -63,15 +72,15 @@ const WorkerDetailModal = ({
                 >
                   Remove
                 </button>
-                {/* {isManager && (
+                {isManager && (
                   <button
-                    onClick={() => setShowOffRules(true)}
+                    onClick={() => setIsOffRulesModalOpen(true)}
                     className="text-nowrap flex items-center gap-2 px-3 py-2 text-red-600 bg-red-100  rounded-md hover:bg-red-200 text-sm"
                   >
                     <Calendar width={16} />
                     OFF Rules
                   </button>
-                )} */}
+                )}
                 {isManager && (
                   <button
                     onClick={() => onEdit(worker)}

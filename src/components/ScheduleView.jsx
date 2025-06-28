@@ -739,14 +739,26 @@ const ScheduleView = ({
                       let shiftsContent = "";
 
                       // Check for OFF/SWIM MEET status
-                      if (dayShifts.some((s) => s.type === "OFF")) {
-                        statusContent +=
-                          '<div style="color: #ef4444; font-size: 10px;">OFF</div>';
-                      }
-                      if (dayShifts.some((s) => s.type === "SWIM MEET")) {
-                        statusContent +=
-                          '<div style="color: #ff8904; font-size: 10px;">SWIM MEET</div>';
-                      }
+                      dayShifts.forEach((s) => {
+                        if (s.type === "OFF") {
+                          // Show custom label if present, otherwise just "OFF"
+                          const offLabel =
+                            s.label && s.label.trim()
+                              ? s.label
+                              : s.customText && s.customText.trim()
+                              ? s.customText
+                              : s.start && s.end
+                              ? `OFF ${formatTime12hr(
+                                  s.start
+                                )}-${formatTime12hr(s.end)}`
+                              : "OFF";
+                          statusContent += `<div style="color: #ef4444; font-size: 10px;">${offLabel}</div>`;
+                        }
+                        if (s.type === "SWIM MEET") {
+                          statusContent +=
+                            '<div style="color: #ff8904; font-size: 10px;">SWIM MEET</div>';
+                        }
+                      });
 
                       // Get work shifts
                       const workShifts = dayShifts.filter(

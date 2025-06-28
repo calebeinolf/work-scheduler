@@ -1,4 +1,5 @@
-// src/components/HomePage.jsx
+// src/pages/HomePage.jsx
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";

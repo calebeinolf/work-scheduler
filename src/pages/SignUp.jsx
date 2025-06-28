@@ -1,9 +1,8 @@
 // src/components/LandingPage.jsx
 
-import React from "react";
 import { Link } from "react-router-dom";
 
-const LandingPage = () => {
+const SignUp = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-xl text-center">
@@ -47,4 +46,4 @@ const LandingPage = () => {
   );
 };
 
-export default LandingPage;
+export default SignUp;

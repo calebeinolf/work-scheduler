@@ -1,4 +1,4 @@
-// src/components/Dashboard.jsx
+// src/pages/Dashboard.jsx
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,10 +10,10 @@ import {
   onSnapshot,
   limit,
   doc,
-} from "firebase/firestore"; // <-- FIXED: added 'doc'
+} from "firebase/firestore";
 import { auth, db } from "../firebase";
-import ManagerDashboard from "./ManagerDashboard";
-import WorkerDashboard from "./WorkerDashboard";
+import ManagerDashboard from "../components/ManagerDashboard";
+import WorkerDashboard from "../components/WorkerDashboard";
 import { LogOut } from "lucide-react";
 import Loader from "../assets/Loader";
 

@@ -9,13 +9,13 @@ import {
 } from "react-router-dom";
 
 // Import all the new and existing page components
-import LandingPage from "./components/LandingPage";
-import CreateCompanyPage from "./components/CreateCompanyPage";
-import JoinCompanyPage from "./components/JoinCompanyPage";
-import Dashboard from "./components/Dashboard";
-import Login from "./components/Login";
-import SignUp from "./components/SignUp";
-import HomePage from "./components/HomePage";
+import LandingPage from "./pages/LandingPage";
+import CreateCompanyPage from "./pages/CreateCompanyPage";
+import JoinCompanyPage from "./pages/JoinCompanyPage";
+import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
+import HomePage from "./pages/HomePage";
 
 function App() {
   return (

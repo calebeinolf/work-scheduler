@@ -1,4 +1,4 @@
-// src/components/JoinCompanyPage.jsx
+// src/pages/JoinCompanyPage.jsx
 
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";

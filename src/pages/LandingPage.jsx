@@ -1,5 +1,5 @@
-// src/components/LandingPage.jsx
-import React from "react";
+// src/pages/LandingPage.jsx
+
 import { Link } from "react-router-dom";
 import { CalendarDays, Users, Zap } from "lucide-react";
 

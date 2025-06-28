@@ -38,9 +38,21 @@ const WorkerDashboard = ({ user, company }) => {
 
   return (
     <div>
-      {/* <h2 className="text-3xl font-bold text-gray-800">
-        Welcome, {user.fullName || user.email}
-      </h2> */}
+      <div className="max-w-6xl mx-auto flex justify-between items-start mb-6 gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-800">
+            Welcome, {user?.fullName && user.fullName.split(" ")[0]}!
+          </h2>
+        </div>
+
+        <div className="text-right flex gap-2 flex-wrap justify-end">
+          <div className="flex gap-2">
+            <button className="w-full bg-red-500 hover:bg-red-600 text-white font-medium text-nowrap py-1 px-3 rounded-lg text-sm focus:outline-none focus:shadow-outline transition duration-200">
+              Request OFF
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="">
         {loading ? (

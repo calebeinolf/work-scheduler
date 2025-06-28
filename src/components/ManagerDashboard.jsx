@@ -74,29 +74,23 @@ const ManagerDashboard = ({ user, company }) => {
           </h2>
         </div>
 
-        <div className="text-right flex gap-2 flex-wrap justify-end">
-          <div className="px-3 p-1 rounded-lg flex items-center no-wrap gap-2 bg-gray-100 inset-shadow-sm">
-            <span className="text-sm text-nowrap font-semibold text-gray-600">
-              Join Code:
-            </span>
-            <span className="text-sm text-nowrap font-bold text-blue-600 tracking-wider">
-              {company && company.joinCode}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setIsPresetsModalOpen(true)}
-              className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-lg text-sm"
-            >
-              Edit Presets
-            </button>
-            <button
-              onClick={() => setIsAddWorkerModalOpen(true)}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium text-nowrap py-1 px-3 rounded-lg text-sm focus:outline-none focus:shadow-outline transition duration-200"
-            >
-              + Add Worker
-            </button>
-          </div>
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <button className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-lg text-sm">
+            Manage OFF Requests
+          </button>
+          <button
+            onClick={() => setIsPresetsModalOpen(true)}
+            className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-lg text-sm"
+          >
+            Edit Presets
+          </button>
+          <button
+            onClick={() => setIsAddWorkerModalOpen(true)}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium text-nowrap py-1 px-3 rounded-lg text-sm focus:outline-none focus:shadow-outline transition duration-200"
+          >
+            + Add Worker
+          </button>
         </div>
       </div>
 

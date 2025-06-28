@@ -144,16 +144,16 @@ const Dashboard = () => {
 
           <div className="flex items-center gap-4">
             {userData && (
-              <div className=" rounded-lg flex items-center no-wrap gap-2">
+              <div className=" rounded-lg flex items-center no-wrap gap-1">
                 <span className="text-sm text-nowrap font-medium text-gray-600">
                   {userData.fullName || userData.email}
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-200 hover:bg-gray-300 focus:outline-none"
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-gray-100 focus:outline-none"
                   title="Log Out"
                 >
-                  <LogOut width={16} />
+                  <LogOut width={15} />
                 </button>
               </div>
             )}

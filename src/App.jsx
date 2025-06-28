@@ -1,21 +1,22 @@
 // src/App.jsx
 
-import React from "react";
+import React, { Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
+import Loader from "./assets/Loader";
 
-// Import all the new and existing page components
-import LandingPage from "./pages/LandingPage";
-import CreateCompanyPage from "./pages/CreateCompanyPage";
-import JoinCompanyPage from "./pages/JoinCompanyPage";
-import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Login";
-import SignUp from "./pages/SignUp";
-import HomePage from "./pages/HomePage";
+// Lazy load all page components for better code splitting
+const LandingPage = React.lazy(() => import("./pages/LandingPage"));
+const CreateCompanyPage = React.lazy(() => import("./pages/CreateCompanyPage"));
+const JoinCompanyPage = React.lazy(() => import("./pages/JoinCompanyPage"));
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const Login = React.lazy(() => import("./pages/Login"));
+const SignUp = React.lazy(() => import("./pages/SignUp"));
+const HomePage = React.lazy(() => import("./pages/HomePage"));
 
 function App() {
   return (

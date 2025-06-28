@@ -1,0 +1,78 @@
+/* CSS optimizations to prevent Cumulative Layout Shift (CLS) */
+
+/* Prevent layout shifts from table column width changes */
+.schedule-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* Ensure consistent button sizes */
+.nav-button {
+  min-width: 36px;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+
+/* Prevent layout shifts from dynamic text content */
+.week-title {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Fixed dimensions for loading states */
+.loading-placeholder {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Prevent toolbar layout shifts */
+.floating-toolbar {
+  will-change: transform;
+  contain: layout style;
+}
+
+/* Smooth transitions without layout shifts */
+.fade-transition {
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Reserve space for scrollbars consistently */
+.scrollbar-container {
+  height: 15px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Prevent shifts from modal overlays */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-content {
+  will-change: transform;
+  contain: layout style;
+}
+
+/* Optimize table cell rendering */
+.schedule-cell {
+  min-height: 48px;
+  contain: layout style;
+}
+
+/* Prevent layout shifts from hover states */
+.hover-cell {
+  transition: background-color 0.1s ease;
+}

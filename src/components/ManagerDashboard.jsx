@@ -6,6 +6,7 @@ import { db } from "../firebase";
 import ScheduleView from "./ScheduleView";
 import AddWorkerModal from "./AddWorkerModal";
 import EditPresetsModal from "./EditPresetsModal";
+import Loader from "../assets/Loader";
 
 const ManagerDashboard = ({ user, company }) => {
   const [workers, setWorkers] = useState([]);
@@ -95,8 +96,9 @@ const ManagerDashboard = ({ user, company }) => {
       </div>
 
       {loadingWorkers ? (
-        <div className="text-center p-6 bg-white rounded-lg shadow">
-          <p className="text-gray-500">Loading workers...</p>
+        <div className="p-6 text-center flex items center justify-center gap-2">
+          <Loader />
+          <p className="text-gray-500">Loading schedule...</p>
         </div>
       ) : (
         <ScheduleView

@@ -1,6 +1,10 @@
 // src/utils/scheduleUtils.js
 
-// --- Deep object comparison helper ---
+// Simple memoization cache for deep equality checks
+const deepEqualCache = new Map();
+const CACHE_SIZE_LIMIT = 100;
+
+// --- Deep object comparison helper with memoization ---
 export function deepEqual(objA, objB) {
   if (objA === objB) return true;
 
@@ -13,29 +17,54 @@ export function deepEqual(objA, objB) {
     return objA === objB;
   }
 
-  if (objA.constructor !== objB.constructor) return false;
-
-  if (Array.isArray(objA)) {
-    if (objA.length !== objB.length) return false;
-    for (let i = 0; i < objA.length; i++) {
-      if (!deepEqual(objA[i], objB[i])) return false;
-    }
-    return true;
+  // Create a cache key for memoization (simple string representation)
+  const cacheKey = JSON.stringify([objA, objB]);
+  if (deepEqualCache.has(cacheKey)) {
+    return deepEqualCache.get(cacheKey);
   }
 
-  if (typeof objA === "object") {
-    const keysA = Object.keys(objA);
-    const keysB = Object.keys(objB);
-    if (keysA.length !== keysB.length) return false;
-    for (const key of keysA) {
-      if (!keysB.includes(key) || !deepEqual(objA[key], objB[key])) {
-        return false;
+  let result;
+
+  if (objA.constructor !== objB.constructor) {
+    result = false;
+  } else if (Array.isArray(objA)) {
+    if (objA.length !== objB.length) {
+      result = false;
+    } else {
+      result = true;
+      for (let i = 0; i < objA.length; i++) {
+        if (!deepEqual(objA[i], objB[i])) {
+          result = false;
+          break;
+        }
       }
     }
-    return true;
+  } else if (typeof objA === "object") {
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+    if (keysA.length !== keysB.length) {
+      result = false;
+    } else {
+      result = true;
+      for (const key of keysA) {
+        if (!keysB.includes(key) || !deepEqual(objA[key], objB[key])) {
+          result = false;
+          break;
+        }
+      }
+    }
+  } else {
+    result = false;
   }
 
-  return false;
+  // Cache the result with size limit
+  if (deepEqualCache.size >= CACHE_SIZE_LIMIT) {
+    const firstKey = deepEqualCache.keys().next().value;
+    deepEqualCache.delete(firstKey);
+  }
+  deepEqualCache.set(cacheKey, result);
+
+  return result;
 }
 
 // --- Time formatting and calculation helpers ---

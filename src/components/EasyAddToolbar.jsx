@@ -15,7 +15,14 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
   };
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-auto bg-gray-500 text-white p-2 rounded-t-lg shadow flex items-center gap-2 z-30">
+    <div
+      className="floating-toolbar fixed bottom-0 left-1/2 w-auto bg-gray-500 text-white p-2 rounded-t-lg shadow flex items-center gap-2 z-30"
+      style={{
+        transform: "translateX(-50%)",
+        minHeight: "48px", // Fixed height to prevent CLS
+        maxWidth: "90vw", // Prevent overflow on small screens
+      }}
+    >
       <select
         value={selectedRole}
         onChange={(e) => setSelectedRole(e.target.value)}

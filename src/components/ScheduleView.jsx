@@ -1,6 +1,6 @@
 // src/components/ScheduleView.jsx
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import {
   onSnapshot,
   doc,
@@ -11,9 +11,14 @@ import {
 } from "firebase/firestore";
 import { useLocation, useNavigate } from "react-router-dom";
 import { db } from "../firebase";
-import EditWorkerModal from "./EditWorkerModal";
-import ShiftEditPopover from "./ShiftEditPopover";
-import WorkerDetailModal from "./WorkerDetailModal";
+import "./schedule-optimizations.css";
+
+// Lazy load heavy components that are only used conditionally
+const EditWorkerModal = React.lazy(() => import("./EditWorkerModal"));
+const ShiftEditPopover = React.lazy(() => import("./ShiftEditPopover"));
+const WorkerDetailModal = React.lazy(() => import("./WorkerDetailModal"));
+
+// Keep frequently used components as regular imports
 import WorkerRow from "./WorkerRow";
 import PersonalScheduleRow from "./PersonalScheduleRow";
 import BulkActionsBar from "./BulkActionsBar";
@@ -26,7 +31,7 @@ import {
   ChevronsRight,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react";
+} from "../utils/icons";
 import Loader from "../assets/Loader";
 import {
   deepEqual,
@@ -1051,18 +1056,21 @@ const ScheduleView = ({
           onClose={handleClosePopover}
         />
       )}
-      {/* Date & Arrows */}
-      <div className="max-w-6xl mx-auto flex justify-between items-center mb-4">
-        <div className="flex items-center gap-2">
+      {/* Date & Arrows - Fixed layout to prevent CLS */}
+      <div
+        className="max-w-6xl mx-auto flex justify-between items-center mb-4"
+        style={{ minHeight: "48px" }}
+      >
+        <div className="flex items-center gap-2" style={{ minWidth: "120px" }}>
           <button
             onClick={() => handleWeekChange(-1)}
-            className="h-9 w-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
+            className="nav-button h-9 w-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
           >
             <ChevronLeft width={19} />
           </button>
 
           <button
-            className={`h-9 w-9 flex items-center justify-center gap-2 text-blue-500 bg-blue-100 rounded-full ${
+            className={`nav-button h-9 w-9 flex items-center justify-center gap-2 text-blue-500 bg-blue-100 rounded-full fade-transition ${
               (isCurrentWeek || weekStartDate < getSundayOfWeek(new Date())) &&
               "opacity-0 !cursor-default"
             }`}
@@ -1072,13 +1080,16 @@ const ScheduleView = ({
           </button>
         </div>
 
-        <h3 className="text-2xl font-medium text-center">
+        <h3 className="week-title text-2xl font-medium text-center flex-1">
           {formatWeekRange(weekStartDate, weekEndDate)}
         </h3>
 
-        <div className="flex items-center gap-2">
+        <div
+          className="flex items-center gap-2"
+          style={{ minWidth: "120px", justifyContent: "flex-end" }}
+        >
           <button
-            className={`h-9 w-9 flex items-center justify-center gap-2 text-blue-500 bg-blue-100 rounded-full ${
+            className={`nav-button h-9 w-9 flex items-center justify-center gap-2 text-blue-500 bg-blue-100 rounded-full fade-transition ${
               (isCurrentWeek || weekStartDate > getSundayOfWeek(new Date())) &&
               "opacity-0 !cursor-default"
             }`}
@@ -1089,7 +1100,7 @@ const ScheduleView = ({
 
           <button
             onClick={() => handleWeekChange(1)}
-            className="h-9 w-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
+            className="nav-button h-9 w-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
           >
             <ChevronRight width={19} />
           </button>
@@ -1116,24 +1127,26 @@ const ScheduleView = ({
 
       {/* Header */}
       <div className="sticky top-0 z-10">
-        {/* Bulk Actions Bar */}
-        {isManager && (
-          <BulkActionsBar
-            selectedWorkers={selectedWorkers}
-            handleBulkUpdate={handleBulkUpdate}
-            handleBulkRemove={handleBulkRemove}
-            handleUndo={handleUndo}
-            handleRedo={handleRedo}
-            canUndo={historyIndex > 0}
-            canRedo={historyIndex < history.length - 1}
-            onPrint={handlePrint}
-            isPublished={isPublished}
-            hasUnpublishedChanges={hasUnpublishedChanges}
-            onPublish={handlePublish}
-            onUnpublish={handleUnpublish}
-            onPublishChanges={handlePublishChanges}
-          />
-        )}
+        {/* Bulk Actions Bar - Reserve space to prevent layout shift */}
+        <div style={{ minHeight: isManager ? "auto" : "0" }}>
+          {isManager && (
+            <BulkActionsBar
+              selectedWorkers={selectedWorkers}
+              handleBulkUpdate={handleBulkUpdate}
+              handleBulkRemove={handleBulkRemove}
+              handleUndo={handleUndo}
+              handleRedo={handleRedo}
+              canUndo={historyIndex > 0}
+              canRedo={historyIndex < history.length - 1}
+              onPrint={handlePrint}
+              isPublished={isPublished}
+              hasUnpublishedChanges={hasUnpublishedChanges}
+              onPublish={handlePublish}
+              onUnpublish={handleUnpublish}
+              onPublishChanges={handlePublishChanges}
+            />
+          )}
+        </div>
 
         {/* Week Header */}
         <div
@@ -1141,7 +1154,7 @@ const ScheduleView = ({
           className="overflow-x-auto no-scrollbar sticky top-0 z-10 shadow-md"
         >
           <table
-            className="w-full border-collapse border"
+            className="schedule-table w-full border-collapse border"
             style={{ tableLayout: "fixed" }}
           >
             <thead>{renderWeekHeader()}</thead>
@@ -1165,7 +1178,7 @@ const ScheduleView = ({
       <div className="overflow-x-auto" ref={mainContentRef}>
         <table
           ref={tableRef}
-          className="w-full border-collapse border"
+          className="schedule-table w-full border-collapse border"
           style={{ tableLayout: "fixed" }}
           onMouseLeave={() => {
             setHoveredCell({ row: null, col: null });
@@ -1173,11 +1186,27 @@ const ScheduleView = ({
         >
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={11} className="text-center p-4">
-                  <Loader /> Loading schedule...
-                </td>
-              </tr>
+              // Reserve proper space for loading state to prevent CLS
+              <>
+                <tr>
+                  <td
+                    colSpan={isManager ? 11 : 10}
+                    className="loading-placeholder text-center p-4"
+                  ></td>
+                </tr>
+                {/* Add placeholder rows to maintain consistent height */}
+                {Array.from({ length: Math.max(5, workers.length) }).map(
+                  (_, index) => (
+                    <tr
+                      key={`placeholder-${index}`}
+                      className="schedule-cell"
+                      style={{ height: "48px", opacity: 0 }}
+                    >
+                      <td colSpan={isManager ? 11 : 10}>&nbsp;</td>
+                    </tr>
+                  )
+                )}
+              </>
             ) : (
               sortedManagersAndGuards.map((worker) => (
                 <WorkerRow

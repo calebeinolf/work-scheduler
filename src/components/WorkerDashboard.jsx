@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase"; // Corrected import path
 import ScheduleView from "./ScheduleView";
+import Loader from "../assets/Loader";
 
 const WorkerDashboard = ({ user, company }) => {
   const [workers, setWorkers] = useState([]);
@@ -56,7 +57,8 @@ const WorkerDashboard = ({ user, company }) => {
 
       <div className="">
         {loading ? (
-          <div className="p-6 text-center">
+          <div className="p-6 text-center flex items center justify-center gap-2">
+            <Loader />
             <p className="text-gray-500">Loading schedule...</p>
           </div>
         ) : (

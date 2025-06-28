@@ -45,13 +45,13 @@ const WorkerDashboard = ({ user, company }) => {
           </h2>
         </div>
 
-        <div className="text-right flex gap-2 flex-wrap justify-end">
+        {/* <div className="text-right flex gap-2 flex-wrap justify-end">
           <div className="flex gap-2">
             <button className="w-full bg-red-500 hover:bg-red-600 text-white font-medium text-nowrap py-1 px-3 rounded-lg text-sm focus:outline-none focus:shadow-outline transition duration-200">
               Request OFF
             </button>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <div className="">

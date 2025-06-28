@@ -76,9 +76,9 @@ const ManagerDashboard = ({ user, company }) => {
 
         {/* Action buttons */}
         <div className="flex gap-2">
-          <button className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-lg text-sm">
+          {/* <button className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-lg text-sm">
             Manage OFF Requests
-          </button>
+          </button> */}
           <button
             onClick={() => setIsPresetsModalOpen(true)}
             className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-lg text-sm"

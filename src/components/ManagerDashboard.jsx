@@ -6,6 +6,7 @@ import { db } from "../firebase";
 import ScheduleView from "./ScheduleView";
 import AddWorkerModal from "./AddWorkerModal";
 import EditPresetsModal from "./EditPresetsModal";
+import OffRequestsPage from "./OffRequestsPage";
 import Loader from "../assets/Loader";
 
 const ManagerDashboard = ({ user, company }) => {
@@ -13,6 +14,7 @@ const ManagerDashboard = ({ user, company }) => {
   const [loadingWorkers, setLoadingWorkers] = useState(true);
   const [isAddWorkerModalOpen, setIsAddWorkerModalOpen] = useState(false);
   const [isPresetsModalOpen, setIsPresetsModalOpen] = useState(false);
+  const [showManageOffRequests, setShowManageOffRequests] = useState(false);
   const [presets, setPresets] = useState([]);
 
   useEffect(() => {
@@ -55,6 +57,17 @@ const ManagerDashboard = ({ user, company }) => {
     };
   }, [company]);
 
+  // Show the OffRequestsPage if requested
+  if (showManageOffRequests) {
+    return (
+      <OffRequestsPage
+        company={company}
+        onBack={() => setShowManageOffRequests(false)}
+        isManager={true}
+      />
+    );
+  }
+
   return (
     <div>
       <AddWorkerModal
@@ -77,9 +90,12 @@ const ManagerDashboard = ({ user, company }) => {
 
         {/* Action buttons */}
         <div className="flex gap-2">
-          {/* <button className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-md text-sm">
+          <button
+            onClick={() => setShowManageOffRequests(true)}
+            className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-md text-sm"
+          >
             Manage OFF Requests
-          </button> */}
+          </button>
           <button
             onClick={() => setIsPresetsModalOpen(true)}
             className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-md text-sm"

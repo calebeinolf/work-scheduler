@@ -70,7 +70,7 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
   const handleSave = () => {
     const validShifts = shifts.filter((s) => s.start && s.end);
 
-    // Preserve existing OFF and SWIM MEET statuses, including rule-based OFF shifts
+    // Preserve existing OFF and SWIM MEET statuses, including rule-based and request-based OFF shifts
     const existingStatuses = Array.isArray(initialShift)
       ? initialShift.filter((s) => s.type === "OFF" || s.type === "SWIM MEET")
       : [];
@@ -90,14 +90,14 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
       : [];
 
     const hasStatus = currentStatuses.some(
-      (s) => s.type === statusType && !s.isRule
+      (s) => s.type === statusType && !s.isRule && !s.isRequest
     );
 
     let newStatuses;
     if (hasStatus) {
-      // Remove the status (but preserve rule-based OFF shifts)
+      // Remove the status (but preserve rule-based and request-based OFF shifts)
       newStatuses = currentStatuses.filter(
-        (s) => !(s.type === statusType && !s.isRule)
+        (s) => !(s.type === statusType && !s.isRule && !s.isRequest)
       );
     } else {
       // Add the status
@@ -120,10 +120,12 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
       end: customOffTime.end,
     };
 
-    // Get existing statuses except manual OFF (preserve rule-based OFF and SWIM MEET)
+    // Get existing statuses except manual OFF (preserve rule-based, request-based OFF and SWIM MEET)
     const currentStatuses = Array.isArray(initialShift)
       ? initialShift.filter(
-          (s) => s.type === "SWIM MEET" || (s.type === "OFF" && s.isRule)
+          (s) =>
+            s.type === "SWIM MEET" ||
+            (s.type === "OFF" && (s.isRule || s.isRequest))
         )
       : [];
 

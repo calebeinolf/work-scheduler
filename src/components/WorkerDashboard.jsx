@@ -4,11 +4,15 @@ import React, { useState, useEffect } from "react";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase"; // Corrected import path
 import ScheduleView from "./ScheduleView";
+import RequestOffModal from "./RequestOffModal";
+import OffRequestsPage from "./OffRequestsPage";
 import Loader from "../assets/Loader";
 
 const WorkerDashboard = ({ user, company }) => {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isRequestOffModalOpen, setIsRequestOffModalOpen] = useState(false);
+  const [showMyOffRequests, setShowMyOffRequests] = useState(false);
 
   useEffect(() => {
     if (!company?.id) return;
@@ -37,8 +41,27 @@ const WorkerDashboard = ({ user, company }) => {
     return () => unsubscribeWorkers();
   }, [company]);
 
+  // Show the OffRequestsPage if requested
+  if (showMyOffRequests) {
+    return (
+      <OffRequestsPage
+        user={user}
+        company={company}
+        onBack={() => setShowMyOffRequests(false)}
+        isManager={false}
+      />
+    );
+  }
+
   return (
     <div>
+      <RequestOffModal
+        isOpen={isRequestOffModalOpen}
+        onClose={() => setIsRequestOffModalOpen(false)}
+        user={user}
+        company={company}
+      />
+
       <div className="max-w-6xl mx-auto flex justify-between items-start mb-6 gap-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">
@@ -46,13 +69,22 @@ const WorkerDashboard = ({ user, company }) => {
           </h2>
         </div>
 
-        {/* <div className="text-right flex gap-2 flex-wrap justify-end">
+        <div className="text-right flex gap-2 flex-wrap justify-end">
           <div className="flex gap-2">
-            <button className="w-full bg-red-500 hover:bg-red-600 text-white font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200">
+            <button
+              onClick={() => setShowMyOffRequests(true)}
+              className="bg-gray-500 hover:bg-gray-600 text-white font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
+            >
+              Manage OFF Requests
+            </button>
+            <button
+              onClick={() => setIsRequestOffModalOpen(true)}
+              className="w-full bg-red-500 hover:bg-red-600 text-white font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
+            >
               Request OFF
             </button>
           </div>
-        </div> */}
+        </div>
       </div>
 
       <div className="">

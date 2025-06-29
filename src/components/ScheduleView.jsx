@@ -1161,7 +1161,7 @@ const ScheduleView = ({
           className="overflow-x-auto no-scrollbar sticky top-0 z-10 shadow-md"
         >
           <table
-            className="schedule-table w-full border-collapse border"
+            className="schedule-table w-full border-collapse"
             style={{ tableLayout: "fixed" }}
           >
             <thead>{renderWeekHeader()}</thead>
@@ -1185,7 +1185,7 @@ const ScheduleView = ({
       <div className="overflow-x-auto" ref={mainContentRef}>
         <table
           ref={tableRef}
-          className="schedule-table w-full border-collapse border"
+          className="schedule-table w-full border-collapse"
           style={{ tableLayout: "fixed" }}
           onMouseLeave={() => {
             setHoveredCell({ row: null, col: null });

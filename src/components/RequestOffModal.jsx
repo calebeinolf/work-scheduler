@@ -12,7 +12,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, Info } from "lucide-react";
 import { getSundayOfWeek } from "../utils/scheduleUtils";
 
 const RequestOffModal = ({ isOpen, onClose, user, company }) => {
@@ -361,25 +361,42 @@ const RequestOffModal = ({ isOpen, onClose, user, company }) => {
                 >
                   Reason (optional)
                 </label>
-                <textarea
+                <input
                   id="reason"
+                  type="text"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="Brief reason for time off request..."
-                  className="p-2 border rounded w-full h-20 resize-none"
+                  placeholder="Brief reason..."
+                  className="p-2 border rounded w-full"
                   maxLength={200}
                 />
               </div>
 
-              {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                <p className="text-sm text-blue-800">
-                  <Clock size={16} className="inline mr-1" />
-                  <strong>Note:</strong> Requests made 2+ weeks in advance will
-                  be automatically approved. Requests within 2 weeks require
-                  manager approval.
-                </p>
-              </div>
+              {/* Info Box - only show if start date is within 2 weeks */}
+              {startDate &&
+              (() => {
+                const today = new Date();
+                const start = new Date(startDate + "T00:00:00");
+                const diffDays = Math.ceil(
+                  (start - today) / (1000 * 60 * 60 * 24)
+                );
+                return diffDays < 14 && diffDays >= 0;
+              })() ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                  <p className="text-sm text-amber-800">
+                    <strong>Note:</strong> This request will be sent to your
+                    manager for approval since it is made within 2 weeks of the
+                    requested date.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                  <p className="text-sm text-green-800">
+                    This request will be automatically approved since it is made
+                    2+ weeks in advance!
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -394,7 +411,7 @@ const RequestOffModal = ({ isOpen, onClose, user, company }) => {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-red-300"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
             >
               {loading ? "Submitting..." : "Submit Request"}
             </button>

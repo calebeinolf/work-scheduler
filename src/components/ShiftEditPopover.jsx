@@ -4,7 +4,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { Clock } from "lucide-react";
 import { formatTime12hr } from "../utils/scheduleUtils";
 
-const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
+const ShiftEditPopover = ({
+  targetCell,
+  presets,
+  onSave,
+  onClose,
+  pendingOffRequests = [],
+  onApproveOffRequest,
+}) => {
   const { worker, initialShift } = targetCell;
   const [shifts, setShifts] = useState([]);
   const [editingCustomIndex, setEditingCustomIndex] = useState(null);
@@ -81,6 +88,22 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
 
   const handleToggleStatus = (statusType) => {
     if (statusType === "CUSTOM_OFF") {
+      // Initialize custom off time based on existing manageable OFF shift
+      const existingManageableOff = Array.isArray(initialShift)
+        ? initialShift.find((s) => s.type === "OFF" && !s.isRule)
+        : null;
+
+      if (
+        existingManageableOff &&
+        existingManageableOff.start &&
+        existingManageableOff.end
+      ) {
+        setCustomOffTime({
+          start: existingManageableOff.start,
+          end: existingManageableOff.end,
+        });
+      }
+
       setCustomOffMode(true);
       return;
     }
@@ -89,19 +112,25 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
       ? initialShift.filter((s) => s.type === "OFF" || s.type === "SWIM MEET")
       : [];
 
-    const hasStatus = currentStatuses.some(
-      (s) => s.type === statusType && !s.isRule && !s.isRequest
+    const hasManageableStatus = currentStatuses.some(
+      (s) => s.type === statusType && !s.isRule
     );
 
     let newStatuses;
-    if (hasStatus) {
-      // Remove the status (but preserve rule-based and request-based OFF shifts)
+    if (hasManageableStatus) {
+      // Remove only the manageable status (preserve rule-based shifts)
       newStatuses = currentStatuses.filter(
-        (s) => !(s.type === statusType && !s.isRule && !s.isRequest)
+        (s) => !(s.type === statusType && !s.isRule)
       );
     } else {
-      // Add the status
-      newStatuses = [...currentStatuses, { type: statusType }];
+      // Remove any existing manageable OFF before adding new one
+      const filteredStatuses =
+        statusType === "OFF"
+          ? currentStatuses.filter((s) => !(s.type === "OFF" && !s.isRule))
+          : currentStatuses;
+
+      // Add the new status
+      newStatuses = [...filteredStatuses, { type: statusType }];
     }
 
     // Get existing work shifts (not the edited ones in state)
@@ -120,12 +149,10 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
       end: customOffTime.end,
     };
 
-    // Get existing statuses except manual OFF (preserve rule-based, request-based OFF and SWIM MEET)
+    // Get existing statuses except any manageable OFF (preserve rule-based OFF and SWIM MEET)
     const currentStatuses = Array.isArray(initialShift)
       ? initialShift.filter(
-          (s) =>
-            s.type === "SWIM MEET" ||
-            (s.type === "OFF" && (s.isRule || s.isRequest))
+          (s) => s.type === "SWIM MEET" || (s.type === "OFF" && s.isRule)
         )
       : [];
 
@@ -139,15 +166,22 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
       customOffShift,
       ...existingWorkShifts,
     ];
+
     onSave(allShifts.length > 0 ? allShifts : null);
+    setCustomOffMode(false);
   };
 
-  // Check if current day has OFF or SWIM MEET status
-  const hasOffStatus =
-    Array.isArray(initialShift) && initialShift.some((s) => s.type === "OFF");
+  // Check if current day has manageable OFF or SWIM MEET status
+  const hasManageableOffStatus =
+    Array.isArray(initialShift) &&
+    initialShift.some((s) => s.type === "OFF" && !s.isRule);
   const hasSwimMeetStatus =
     Array.isArray(initialShift) &&
     initialShift.some((s) => s.type === "SWIM MEET");
+
+  // Check if there's any OFF status (for display purposes)
+  const hasAnyOffStatus =
+    Array.isArray(initialShift) && initialShift.some((s) => s.type === "OFF");
 
   const getPopoverStyle = () => {
     if (!targetCell.rect) return { display: "none" };
@@ -205,6 +239,61 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
       style={getPopoverStyle()}
     >
       <div className="space-y-2">
+        {/* Pending OFF Requests Section */}
+        {pendingOffRequests && pendingOffRequests.length > 0 && (
+          <div className="border-b pb-2 mb-2">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+              Pending OFF Requests
+            </h4>
+            <div className="space-y-2">
+              {pendingOffRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="bg-amber-50 border border-amber-200 rounded p-2 text-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">
+                        {request.isAllDay
+                          ? "Full Day OFF"
+                          : `OFF ${formatTime12hr(
+                              request.startTime
+                            )}-${formatTime12hr(request.endTime)}`}
+                        {/* Show multi-day indicator */}
+                        {request.endDate &&
+                          request.endDate !== request.startDate && (
+                            <span className="text-blue-600 font-medium ml-1">
+                              (Multi-day)
+                            </span>
+                          )}
+                      </div>
+                      {request.reason && (
+                        <div className="text-gray-600 text-xs">
+                          {request.reason}
+                        </div>
+                      )}
+                      {/* Show date range for multi-day requests */}
+                      {request.endDate &&
+                        request.endDate !== request.startDate && (
+                          <div className="text-gray-600 text-xs">
+                            {new Date(request.startDate).toLocaleDateString()} -{" "}
+                            {new Date(request.endDate).toLocaleDateString()}
+                          </div>
+                        )}
+                    </div>
+                    <button
+                      onClick={() => onApproveOffRequest?.(request.id, request)}
+                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 rounded"
+                    >
+                      Approve
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!customOffMode ? (
           <>
             <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
@@ -339,12 +428,12 @@ const ShiftEditPopover = ({ targetCell, presets, onSave, onClose }) => {
               <button
                 onClick={() => handleToggleStatus("OFF")}
                 className={`w-full text-sm text-center p-1 px-2 rounded flex items-center justify-center gap-1 ${
-                  hasOffStatus
+                  hasManageableOffStatus
                     ? "text-red-600 bg-red-200 border border-red-400"
                     : "text-red-600 bg-red-100 hover:bg-red-200"
                 }`}
               >
-                {hasOffStatus && (
+                {hasManageableOffStatus && (
                   <svg
                     width="12"
                     height="12"

@@ -25,6 +25,7 @@ const WorkerRow = ({
   onToggleSelect,
   isManager,
   currentUserId,
+  getPendingOffRequests,
 }) => {
   const getCellClass = (colKey) => {
     if (isSelected && isManager) return ""; // Selection highlight takes priority, disable hover highlight
@@ -131,6 +132,10 @@ const WorkerRow = ({
       {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day) => {
         const dayShifts = weeklyShifts?.[day];
         const isRevealed = revealedHoursWorkerId === worker.uid;
+        const pendingRequests = getPendingOffRequests
+          ? getPendingOffRequests(worker.uid, day)
+          : [];
+
         let dailyTotalHours = 0;
         if (isRevealed && Array.isArray(dayShifts)) {
           // Only count work shifts for hours display
@@ -158,51 +163,84 @@ const WorkerRow = ({
               ) : (
                 <span className="text-gray-400">0</span>
               )
-            ) : Array.isArray(dayShifts) ? (
-              <div className="space-y-0.5">
-                {/* Show OFF/SWIM MEET status first */}
-                {dayShifts
-                  .filter((s) => s.type === "OFF")
-                  .map((offShift, index) => (
-                    <div key={`off-${index}`} className="text-xs text-red-500">
-                      {offShift.start && offShift.end
-                        ? `OFF ${formatTime12hr(
-                            offShift.start
-                          )}-${formatTime12hr(offShift.end)}`
-                        : "OFF"}
-                    </div>
-                  ))}
-                {dayShifts.filter((s) => s.type === "SWIM MEET").length > 0 && (
-                  <div className="text-xs text-orange-400">SWIM MEET</div>
-                )}
-                {/* Show work shifts */}
-                {dayShifts
-                  .filter((s) => s.type !== "OFF" && s.type !== "SWIM MEET")
-                  .sort((a, b) => (a.start || "").localeCompare(b.start || ""))
-                  .map((shift, index) => (
-                    <div
-                      key={index}
-                      className={`text-xs rounded-md p-0.5 flex items-center gap-1 justify-center text-nowrap ${getShiftHighlightClass(
-                        shift
-                      )}`}
-                    >
-                      <div>{`${formatTime12hr(shift.start)}-${formatTime12hr(
-                        shift.end
-                      )}`}</div>
-                      {shouldShowShiftType(shift, worker) && (
-                        <div className="text-gray-500 text-xs">
-                          {shift.type === "CAMP"
-                            ? "(C)"
-                            : shift.type === "LESSONS"
-                            ? "(L)"
-                            : `(${shift.type[0]})`}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-              </div>
             ) : (
-              <span className="text-gray-400">-</span>
+              <div className="space-y-0.5">
+                {/* Show pending OFF requests for managers or workers viewing their own schedule */}
+                {(isManager || currentUserId === worker.uid) &&
+                  pendingRequests.length > 0 &&
+                  pendingRequests.map((request, index) => (
+                    <div
+                      key={`pending-${index}`}
+                      className="text-xs text-gray-500 bg-gray-100 rounded px-1 py-0.5"
+                      title={`Pending OFF request: ${
+                        request.reason || "No reason provided"
+                      }`}
+                    >
+                      {request.isAllDay
+                        ? "OFF?"
+                        : `OFF ${formatTime12hr(
+                            request.startTime
+                          )}-${formatTime12hr(request.endTime)}?`}
+                    </div>
+                  ))}
+
+                {/* Show existing OFF/SWIM MEET status */}
+                {Array.isArray(dayShifts) && (
+                  <>
+                    {dayShifts
+                      .filter((s) => s.type === "OFF")
+                      .map((offShift, index) => (
+                        <div
+                          key={`off-${index}`}
+                          className="text-xs text-red-500"
+                        >
+                          {offShift.start && offShift.end
+                            ? `OFF ${formatTime12hr(
+                                offShift.start
+                              )}-${formatTime12hr(offShift.end)}`
+                            : "OFF"}
+                        </div>
+                      ))}
+                    {dayShifts.filter((s) => s.type === "SWIM MEET").length >
+                      0 && (
+                      <div className="text-xs text-orange-400">SWIM MEET</div>
+                    )}
+                    {/* Show work shifts */}
+                    {dayShifts
+                      .filter((s) => s.type !== "OFF" && s.type !== "SWIM MEET")
+                      .sort((a, b) =>
+                        (a.start || "").localeCompare(b.start || "")
+                      )
+                      .map((shift, index) => (
+                        <div
+                          key={index}
+                          className={`text-xs rounded-md p-0.5 flex items-center gap-1 justify-center text-nowrap ${getShiftHighlightClass(
+                            shift
+                          )}`}
+                        >
+                          <div>{`${formatTime12hr(
+                            shift.start
+                          )}-${formatTime12hr(shift.end)}`}</div>
+                          {shouldShowShiftType(shift, worker) && (
+                            <div className="text-gray-500 text-xs">
+                              {shift.type === "CAMP"
+                                ? "(C)"
+                                : shift.type === "LESSONS"
+                                ? "(L)"
+                                : `(${shift.type[0]})`}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </>
+                )}
+
+                {/* Show dash if no content */}
+                {(!Array.isArray(dayShifts) || dayShifts.length === 0) &&
+                  (!isManager || pendingRequests.length === 0) && (
+                    <span className="text-gray-400">-</span>
+                  )}
+              </div>
             )}
           </td>
         );

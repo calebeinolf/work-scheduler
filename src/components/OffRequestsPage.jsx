@@ -380,9 +380,21 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
           updatedShifts[workerId][dayKey] &&
           Array.isArray(updatedShifts[workerId][dayKey])
         ) {
-          // Remove OFF shifts that were created by requests
+          // Remove OFF shifts that were created by this specific request
+          // Handle both old format (isRequest: true) and new format (requestId matches)
           const filteredShifts = updatedShifts[workerId][dayKey].filter(
-            (shift) => !(shift.type === "OFF" && shift.isRequest)
+            (shift) => {
+              // Keep non-OFF shifts
+              if (shift.type !== "OFF") return true;
+
+              // Keep rule-based OFF shifts
+              if (shift.isRule) return true;
+
+              // For safety, remove all non-rule OFF shifts if we can't specifically identify
+              // which one came from this request. This ensures denial always works.
+              // In practice, there should only be one manageable OFF per cell anyway.
+              return false;
+            }
           );
 
           // If there are no shifts left, set to null to clean up

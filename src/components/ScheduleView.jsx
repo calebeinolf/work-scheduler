@@ -8,6 +8,10 @@ import {
   updateDoc,
   deleteDoc,
   writeBatch,
+  collection,
+  query,
+  where,
+  getDoc,
 } from "firebase/firestore";
 import { useLocation, useNavigate } from "react-router-dom";
 import { db } from "../firebase";
@@ -43,6 +47,7 @@ import {
   formatTime12hr,
   shouldShowShiftType,
 } from "../utils/scheduleUtils";
+import { Clock, Info } from "lucide-react";
 
 const ScheduleView = ({
   company,
@@ -78,6 +83,7 @@ const ScheduleView = ({
   const [selectedWorkers, setSelectedWorkers] = useState([]);
   const [activePreset, setActivePreset] = useState(null);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+  const [pendingOffRequests, setPendingOffRequests] = useState([]);
   const tableRef = useRef(null);
 
   const [scheduleDocData, setScheduleDocData] = useState(null);
@@ -327,6 +333,40 @@ const ScheduleView = ({
     return () => unsubscribe();
   }, [scheduleDocId, isManager, workers, company, weekStartDate]);
 
+  // Fetch pending OFF requests for managers and workers (for their own requests)
+  useEffect(() => {
+    if (!company?.id) return;
+    if (!isManager && !currentUserId) return;
+
+    let requestsQuery;
+    if (isManager) {
+      // Manager sees all requests for the company
+      requestsQuery = query(
+        collection(db, "offRequests"),
+        where("companyId", "==", company.id),
+        where("status", "==", "pending")
+      );
+    } else {
+      // Worker sees only their own pending requests
+      requestsQuery = query(
+        collection(db, "offRequests"),
+        where("companyId", "==", company.id),
+        where("workerId", "==", currentUserId),
+        where("status", "==", "pending")
+      );
+    }
+
+    const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
+      const requests = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPendingOffRequests(requests);
+    });
+
+    return () => unsubscribe();
+  }, [isManager, company?.id, currentUserId]);
+
   const hasUnpublishedChanges = useMemo(() => {
     if (!isManager || !isPublished || !scheduleDocData) {
       return false;
@@ -338,6 +378,29 @@ const ScheduleView = ({
     const newHistory = history.slice(0, historyIndex + 1);
     setHistory([...newHistory, newShifts]);
     setHistoryIndex(newHistory.length);
+  };
+
+  // Helper function to get pending OFF requests for a specific worker and day
+  const getPendingOffRequestsForCell = (workerId, day) => {
+    // Show pending requests for managers (all workers) or workers viewing their own schedule
+    if (!isManager && currentUserId !== workerId) return [];
+
+    const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const dayIndex = dayNames.indexOf(day);
+    if (dayIndex === -1) return [];
+
+    const targetDate = new Date(weekStartDate);
+    targetDate.setDate(targetDate.getDate() + dayIndex);
+    const targetDateString = targetDate.toISOString().split("T")[0];
+
+    return pendingOffRequests.filter((request) => {
+      if (request.workerId !== workerId) return false;
+
+      const startDate = request.startDate;
+      const endDate = request.endDate || request.startDate;
+
+      return targetDateString >= startDate && targetDateString <= endDate;
+    });
   };
 
   const handleToggleSelectWorker = (workerId) => {
@@ -464,6 +527,86 @@ const ScheduleView = ({
     if (!popoverTarget) return;
     const { worker, day } = popoverTarget;
     handleSaveShift(worker, day, newShiftData, "replace");
+  };
+
+  const handleApproveOffRequest = async (requestId, request) => {
+    try {
+      // Update the request status in Firestore
+      await updateDoc(doc(db, "offRequests", requestId), {
+        status: "approved",
+        approvedAt: new Date().toISOString(),
+        approvedBy: "manager",
+      });
+
+      // Apply OFF shifts to all days in the request
+      const startDate = new Date(request.startDate + "T00:00:00");
+      const endDate = new Date(
+        (request.endDate || request.startDate) + "T00:00:00"
+      );
+
+      const current = new Date(startDate);
+      const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+      while (current <= endDate) {
+        const dayIndex = current.getDay();
+        const dayKey = dayNames[dayIndex];
+
+        // Get the schedule data for this week
+        const sunday = getSundayOfWeek(current);
+        const scheduleDocId = `${company.id}_${sunday.getFullYear()}-${String(
+          sunday.getMonth() + 1
+        ).padStart(2, "0")}-${String(sunday.getDate()).padStart(2, "0")}`;
+
+        const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+        const scheduleDoc = await getDoc(scheduleDocRef);
+
+        if (scheduleDoc.exists()) {
+          const scheduleData = scheduleDoc.data();
+          const shifts = scheduleData.shifts || {};
+
+          // Update the specific worker's day
+          const workerId = request.workerId;
+          if (!shifts[workerId]) shifts[workerId] = {};
+
+          const currentShifts = Array.isArray(shifts[workerId][dayKey])
+            ? [...shifts[workerId][dayKey]]
+            : [];
+
+          // Remove any existing manual OFF shifts to avoid duplicates
+          const filteredShifts = currentShifts.filter(
+            (s) => !(s.type === "OFF" && !s.isRule)
+          );
+
+          // Create a standard OFF shift from the request (marked as from request)
+          const offShift = {
+            type: "OFF",
+            isRequest: true,
+            requestId: requestId,
+            ...(request.isAllDay
+              ? {}
+              : {
+                  start: request.startTime,
+                  end: request.endTime,
+                }),
+          };
+
+          // Add the OFF shift to existing shifts
+          const updatedShifts = [...filteredShifts, offShift];
+          shifts[workerId][dayKey] = updatedShifts;
+
+          // Update the schedule document
+          await setDoc(scheduleDocRef, { shifts }, { merge: true });
+        }
+
+        current.setDate(current.getDate() + 1);
+      }
+
+      // Close the popover
+      handleClosePopover();
+    } catch (error) {
+      console.error("Error approving off request:", error);
+      alert("Failed to approve off request. Please try again.");
+    }
   };
 
   const handleWeekChange = (weeks) => {
@@ -1060,6 +1203,11 @@ const ScheduleView = ({
           presets={presets}
           onSave={handleSaveFromPopover}
           onClose={handleClosePopover}
+          pendingOffRequests={getPendingOffRequestsForCell(
+            popoverTarget.worker.uid,
+            popoverTarget.day
+          )}
+          onApproveOffRequest={handleApproveOffRequest}
         />
       )}
       {/* Date & Arrows - Fixed layout to prevent CLS */}
@@ -1114,10 +1262,11 @@ const ScheduleView = ({
       </div>
       {/* No Schedule Published Message */}
       {!isManager && !scheduleLoading && !isPublished && (
-        <div className="text-center p-8 ">
-          <p className="text-red-600">
-            The schedule for this week has not been published yet.
-          </p>
+        <div className="text-center p-6 bg-amber-100 rounded-lg text-amber-600">
+          <h2 className="text-lg font-medium flex items-center justify-center gap-2">
+            <Clock strokeWidth={2.5} width={18} /> Schedule not published yet.
+          </h2>
+          <p className="text-sm">You can still see scheduled OFF days.</p>
         </div>
       )}
 
@@ -1224,6 +1373,7 @@ const ScheduleView = ({
                   onToggleSelect={handleToggleSelectWorker}
                   isManager={isManager}
                   currentUserId={currentUserId}
+                  getPendingOffRequests={getPendingOffRequestsForCell}
                 />
               ))
             )}
@@ -1298,6 +1448,7 @@ const ScheduleView = ({
                       onToggleSelect={handleToggleSelectWorker}
                       isManager={isManager}
                       currentUserId={currentUserId}
+                      getPendingOffRequests={getPendingOffRequestsForCell}
                     />
                   ))
                 )}
@@ -1336,6 +1487,17 @@ const ScheduleView = ({
           onClear={() => setActivePreset(null)}
         />
       )}
+
+      <div className="flex items-center justify-center mt-8">
+        <div className="px-3 p-1 rounded-lg flex items-center no-wrap gap-2 bg-gray-100 inset-shadow-sm">
+          <span className="text-sm text-nowrap font-semibold text-gray-600">
+            Join Code:
+          </span>
+          <span className="text-sm text-nowrap font-bold text-blue-600 tracking-wider">
+            {company && company.joinCode}
+          </span>
+        </div>
+      </div>
     </div>
   );
 };

@@ -148,13 +148,13 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
         className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200 shrink-0">
+        <div className="p-6 pb-4 border-b border-gray-200 shrink-0">
           <h3 className="text-2xl font-bold text-gray-800">
             Edit Shift Presets
           </h3>
-          <p className="text-sm text-gray-600 mt-1">
+          {/* <p className="text-sm text-gray-600 mt-1">
             Create and manage shift time presets for quick scheduling.
-          </p>
+          </p> */}
         </div>
 
         <div className="p-6 overflow-y-auto grow">
@@ -171,18 +171,18 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
               presets.map((preset, index) => (
                 <div
                   key={preset.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg bg-gray-50 transition-all duration-1000 ${
+                  className={`flex gap-3 p-3 rounded-lg bg-gray-50 transition-all duration-1000 ${
                     justMovedId === preset.id
                       ? "border-2 border-blue-800"
                       : "border"
                   }`}
                 >
-                  <div className="flex flex-col justify-center">
+                  <div className="flex flex-col justify-between">
                     <button
                       type="button"
                       onClick={() => handleReorder(index, "top")}
                       disabled={index === 0}
-                      className="p-1 text-gray-400 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Move to top"
                     >
                       <svg
@@ -204,7 +204,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       type="button"
                       onClick={() => handleReorder(index, "up")}
                       disabled={index === 0}
-                      className="p-1 text-gray-400 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Move up"
                     >
                       <svg
@@ -226,7 +226,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       type="button"
                       onClick={() => handleReorder(index, "down")}
                       disabled={index === presets.length - 1}
-                      className="p-1 text-gray-400 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Move down"
                     >
                       <svg
@@ -248,7 +248,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       type="button"
                       onClick={() => handleReorder(index, "bottom")}
                       disabled={index === presets.length - 1}
-                      className="p-1 text-gray-400 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Move to bottom"
                     >
                       <svg
@@ -267,6 +267,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       </svg>
                     </button>
                   </div>
+
                   <div className="flex-grow space-y-2">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       <input
@@ -313,6 +314,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       ))}
                     </div>
                   </div>
+
                   <button
                     onClick={() => removePreset(preset.id)}
                     className="ml-auto text-red-500 hover:text-red-700 text-xl self-start"

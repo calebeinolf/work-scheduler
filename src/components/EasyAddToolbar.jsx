@@ -16,7 +16,7 @@ const EasyAddToolbar = ({ presets, onPresetSelect, activePreset, onClear }) => {
 
   return (
     <div
-      className="floating-toolbar fixed bottom-0 left-1/2 w-auto bg-gray-500 text-white p-2 rounded-t-lg shadow flex items-center gap-2 z-30"
+      className="floating-toolbar fixed bottom-0 left-1/2 w-auto bg-gray-500 text-white p-2 rounded-t-lg shadow items-center gap-2 z-30 hidden lg:flex"
       style={{
         transform: "translateX(-50%)",
         minHeight: "42px", // Fixed height to prevent CLS

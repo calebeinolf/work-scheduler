@@ -242,24 +242,30 @@ const RequestOffModal = ({ isOpen, onClose, user, company }) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
       onClick={handleClose}
+      style={{ overflowY: "auto" }}
     >
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-lg"
+        className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <form onSubmit={handleSubmit}>
-          <div className="p-6">
-            <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Calendar size={24} />
-              Request Time Off
-            </h3>
+        <div className="p-6 pb-4 border-b border-gray-200 shrink-0">
+          <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            {/* <Calendar size={24} /> */}
+            Request Time Off
+          </h3>
+          {/* <p className="text-sm text-gray-600 mt-1">
+            Submit a time off request for approval or automatic processing.
+          </p> */}
+        </div>
 
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="p-6 overflow-y-auto flex-1">
             {error && (
-              <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4 text-center">
+              <div className="bg-red-100 text-red-700 p-3 rounded-md mb-4">
                 {error}
-              </p>
+              </div>
             )}
 
             <div className="space-y-4">
@@ -372,39 +378,46 @@ const RequestOffModal = ({ isOpen, onClose, user, company }) => {
                 />
               </div>
 
-              {/* Info Box - only show if start date is within 2 weeks */}
+              {/* Info Box */}
               {startDate &&
-              (() => {
-                const today = new Date();
-                const start = new Date(startDate + "T00:00:00");
-                const diffDays = Math.ceil(
-                  (start - today) / (1000 * 60 * 60 * 24)
-                );
-                return diffDays < 14 && diffDays >= 0;
-              })() ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-                  <p className="text-sm text-amber-800">
-                    <strong>Note:</strong> This request will be sent to your
-                    manager for approval since it is made within 2 weeks of the
-                    requested date.
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                  <p className="text-sm text-green-800">
-                    This request will be automatically approved since it is made
-                    2+ weeks in advance!
-                  </p>
-                </div>
-              )}
+                (() => {
+                  const today = new Date();
+                  const start = new Date(startDate + "T00:00:00");
+                  const diffDays = Math.ceil(
+                    (start - today) / (1000 * 60 * 60 * 24)
+                  );
+                  if (diffDays < 14 && diffDays >= 0) {
+                    return (
+                      <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                        <p className="text-sm text-amber-800">
+                          <strong>Note:</strong> This request will be sent to
+                          your manager for approval since it is made within 2
+                          weeks of the requested date.
+                        </p>
+                      </div>
+                    );
+                  } else if (diffDays >= 14) {
+                    return (
+                      <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                        <p className="text-sm text-green-800">
+                          This request will be automatically approved since it
+                          is made 2+ weeks in advance!
+                        </p>
+                      </div>
+                    );
+                  } else {
+                    return null;
+                  }
+                })()}
             </div>
           </div>
 
-          <div className="bg-gray-50 p-3 flex justify-end space-x-3 rounded-b-lg">
+          <div className="bg-gray-50 border-t border-gray-200 p-4 flex justify-end space-x-3 shrink-0">
             <button
               type="button"
               onClick={handleClose}
               className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              disabled={loading}
             >
               Cancel
             </button>

@@ -155,7 +155,7 @@ const BulkActionsBar = ({
           <>
             <button
               onClick={onPrint}
-              className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white"
+              className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white hover:bg-gray-100"
             >
               <Printer width={15} /> Print
             </button>

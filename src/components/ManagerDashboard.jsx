@@ -8,6 +8,7 @@ import AddWorkerModal from "./AddWorkerModal";
 import EditPresetsModal from "./EditPresetsModal";
 import OffRequestsPage from "./OffRequestsPage";
 import Loader from "../assets/Loader";
+import { Menu, X } from "lucide-react";
 
 const ManagerDashboard = ({ user, company }) => {
   const [workers, setWorkers] = useState([]);
@@ -16,6 +17,7 @@ const ManagerDashboard = ({ user, company }) => {
   const [isPresetsModalOpen, setIsPresetsModalOpen] = useState(false);
   const [showManageOffRequests, setShowManageOffRequests] = useState(false);
   const [presets, setPresets] = useState([]);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!company?.id) return;
@@ -81,33 +83,84 @@ const ManagerDashboard = ({ user, company }) => {
         companyId={company.id}
       />
 
-      <div className="max-w-6xl mx-auto flex justify-between items-start mb-6 gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800">
-            Manager Dashboard
-          </h2>
+      <div className="max-w-6xl mx-auto mb-6">
+        {/* Mobile layout with hamburger menu */}
+        <div className="block sm:hidden">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-800">
+              Manager Dashboard
+            </h2>
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 text-gray-600 hover:text-gray-800 focus:outline-none"
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+
+          {/* Mobile menu panel */}
+          {isMenuOpen && (
+            <div className="mt-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 space-y-3">
+              <button
+                onClick={() => {
+                  setIsPresetsModalOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full bg-gray-200 hover:bg-gray-300 font-medium py-2 px-4 rounded-md text-sm"
+              >
+                Edit Presets
+              </button>
+              <button
+                onClick={() => {
+                  setIsAddWorkerModalOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full bg-gray-200 hover:bg-gray-300 font-medium py-2 px-4 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
+              >
+                + Add Worker
+              </button>
+              <button
+                onClick={() => {
+                  setShowManageOffRequests(true);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md text-sm"
+              >
+                Manage OFF Requests
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowManageOffRequests(true)}
-            className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-md text-sm"
-          >
-            Manage OFF Requests
-          </button>
-          <button
-            onClick={() => setIsPresetsModalOpen(true)}
-            className="flex-1 text-nowrap bg-gray-500 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-md text-sm"
-          >
-            Edit Presets
-          </button>
-          <button
-            onClick={() => setIsAddWorkerModalOpen(true)}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
-          >
-            + Add Worker
-          </button>
+        {/* Desktop layout */}
+        <div className="hidden sm:flex justify-between items-start gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Manager Dashboard
+            </h2>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsPresetsModalOpen(true)}
+              className="flex-1 text-nowrap bg-gray-200 hover:bg-gray-300 font-medium py-1 px-3 rounded-md text-sm"
+            >
+              Edit Presets
+            </button>
+            <button
+              onClick={() => setIsAddWorkerModalOpen(true)}
+              className="w-full bg-gray-200 hover:bg-gray-300 font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
+            >
+              + Add Worker
+            </button>
+            <button
+              onClick={() => setShowManageOffRequests(true)}
+              className="flex-1 text-nowrap bg-blue-500 hover:bg-blue-600 text-white font-medium py-1 px-3 rounded-md text-sm"
+            >
+              Manage OFF Requests
+            </button>
+          </div>
         </div>
       </div>
 

@@ -7,12 +7,14 @@ import ScheduleView from "./ScheduleView";
 import RequestOffModal from "./RequestOffModal";
 import OffRequestsPage from "./OffRequestsPage";
 import Loader from "../assets/Loader";
+import { Menu, X } from "lucide-react";
 
 const WorkerDashboard = ({ user, company }) => {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRequestOffModalOpen, setIsRequestOffModalOpen] = useState(false);
   const [showMyOffRequests, setShowMyOffRequests] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!company?.id) return;
@@ -62,27 +64,69 @@ const WorkerDashboard = ({ user, company }) => {
         company={company}
       />
 
-      <div className="max-w-6xl mx-auto flex justify-between items-start mb-6 gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800">
-            Welcome, {user?.fullName && user.fullName.split(" ")[0]}!
-          </h2>
+      <div className="max-w-6xl mx-auto mb-6 ">
+        {/* Mobile layout with hamburger menu */}
+        <div className="block sm:hidden">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-800">
+              Welcome, {user?.fullName && user.fullName.split(" ")[0]}!
+            </h2>
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 text-gray-600 hover:text-gray-800 focus:outline-none"
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+
+          {/* Mobile menu panel */}
+          {isMenuOpen && (
+            <div className="mt-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 space-y-3">
+              <button
+                onClick={() => {
+                  setShowMyOffRequests(true);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
+              >
+                Manage OFF Requests
+              </button>
+              <button
+                onClick={() => {
+                  setIsRequestOffModalOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
+              >
+                Request OFF
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="text-right flex gap-2 flex-wrap justify-end">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowMyOffRequests(true)}
-              className="bg-gray-500 hover:bg-gray-600 text-white font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
-            >
-              Manage OFF Requests
-            </button>
-            <button
-              onClick={() => setIsRequestOffModalOpen(true)}
-              className="w-full bg-red-500 hover:bg-red-600 text-white font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
-            >
-              Request OFF
-            </button>
+        {/* Desktop layout */}
+        <div className="hidden sm:flex justify-between items-start gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Welcome, {user?.fullName && user.fullName.split(" ")[0]}!
+            </h2>
+          </div>
+
+          <div className="text-right flex gap-2 flex-wrap justify-end">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowMyOffRequests(true)}
+                className="bg-gray-500 hover:bg-gray-600 text-white font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
+              >
+                Manage OFF Requests
+              </button>
+              <button
+                onClick={() => setIsRequestOffModalOpen(true)}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
+              >
+                Request OFF
+              </button>
+            </div>
           </div>
         </div>
       </div>

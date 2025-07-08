@@ -40,18 +40,18 @@ const WorkerDetailModal = ({
                 {worker.isMinor ? "Minor" : "Adult"}
               </p>
             )}
-            <div className="mt-6 space-y-3 text-xs">
-              <div className="flex justify-between">
+            <div className="mt-4 space-y-1 text-sm">
+              <div className="flex justify-between border-b pb-1 border-gray-400">
                 <span className="font-semibold text-gray-600">Position:</span>
                 <span className="text-gray-800">{worker.title}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between border-b pb-1 border-gray-400">
                 <span className="font-semibold text-gray-600">Email:</span>
                 <span className="text-gray-800">
                   {worker.email || "Not provided"}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between border-b pb-1 border-gray-400">
                 <span className="font-semibold text-gray-600">Phone:</span>
                 <span className="text-gray-800">
                   {worker.phone || "Not provided"}
@@ -64,35 +64,40 @@ const WorkerDetailModal = ({
             </div>
           </div>
           <div className="bg-gray-50 border-t border-gray-200 p-3 space-y-2 rounded-b-lg">
-            {isManager && (
-              <div className="flex gap-1 justify-end">
+            {isManager ? (
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end sm:gap-1">
                 <button
                   onClick={() => onDelete(worker.uid)}
                   className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 text-sm"
                 >
                   Remove
                 </button>
-                {isManager && (
-                  <button
-                    onClick={() => setIsOffRulesModalOpen(true)}
-                    className="text-nowrap flex items-center gap-2 px-3 py-2 text-red-600 bg-red-100  rounded-md hover:bg-red-200 text-sm"
-                  >
-                    <Calendar width={16} />
-                    OFF Rules
-                  </button>
-                )}
-                {isManager && (
-                  <button
-                    onClick={() => onEdit(worker)}
-                    className="w-full px-4 py-2 flex items-center justify-center gap-2 text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 text-sm"
-                  >
-                    <Pencil width={16} />
-                    Edit
-                  </button>
-                )}
+                <button
+                  onClick={() => setIsOffRulesModalOpen(true)}
+                  className="text-nowrap flex items-center justify-center gap-2 px-3 py-2 text-red-600 bg-red-100 rounded-md hover:bg-red-200 text-sm"
+                >
+                  <Calendar width={16} />
+                  OFF Rules
+                </button>
+                <button
+                  onClick={() => onEdit(worker)}
+                  className="px-4 py-2 flex items-center justify-center gap-2 text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 text-sm"
+                >
+                  <Pencil width={16} />
+                  Edit
+                </button>
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-end">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
                 >
                   Close
                 </button>

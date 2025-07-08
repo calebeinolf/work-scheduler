@@ -24,12 +24,16 @@ import {
   Trash2,
   Undo2,
   ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  FileText,
 } from "lucide-react";
 import { getSundayOfWeek } from "../utils/scheduleUtils";
 import RequestOffModal from "./RequestOffModal";
 
 // Configuration constants
-const REQUESTS_PER_PAGE = 10;
+const REQUESTS_PER_PAGE = 20;
 
 const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
   const [requests, setRequests] = useState([]);
@@ -443,24 +447,56 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
+    // Scroll to top of the page
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString + "T00:00:00").toLocaleDateString("en-US", {
+  const formatDate = (dateString, includeYear = true) => {
+    const options = {
       weekday: "short",
       month: "short",
       day: "numeric",
-      year: "numeric",
-    });
+    };
+
+    if (includeYear) {
+      options.year = "numeric";
+    }
+
+    return new Date(dateString + "T00:00:00").toLocaleDateString(
+      "en-US",
+      options
+    );
+  };
+
+  const formatDateRange = (startDate, endDate) => {
+    if (!endDate || endDate === startDate) {
+      // Single date - omit year
+      return formatDate(startDate, false);
+    }
+
+    const startYear = new Date(startDate + "T00:00:00").getFullYear();
+    const endYear = new Date(endDate + "T00:00:00").getFullYear();
+    const sameYear = startYear === endYear;
+
+    if (sameYear) {
+      // Same year - omit year from both dates
+      return `${formatDate(startDate, false)} - ${formatDate(endDate, false)}`;
+    } else {
+      // Different years - include year in both dates
+      return `${formatDate(startDate, true)} - ${formatDate(endDate, true)}`;
+    }
   };
 
   const formatTime = (timeString) => {
     if (!timeString) return "";
     const [hours, minutes] = timeString.split(":");
-    const hour = parseInt(hours);
+    const hour = parseInt(hours, 10);
     const ampm = hour >= 12 ? "PM" : "AM";
     const displayHour = hour % 12 || 12;
-    return `${displayHour}:${minutes} ${ampm}`;
+    // Only show minutes if not "00"
+    return minutes === "00"
+      ? `${displayHour} ${ampm}`
+      : `${displayHour}:${minutes} ${ampm}`;
   };
 
   const getStatusBadge = (status) => {
@@ -508,48 +544,49 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
   }
 
   return (
-    <div>
+    <div className="">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6 gap-4">
-          <div className="min-w-24">
+        {/* Mobile-optimized header */}
+        <div className="mb-6">
+          {/* Top row: Back button and Request OFF button */}
+          <div className="flex items-center justify-between mb-4">
             <button
               onClick={onBack}
-              className="pl-3 pr-4 py-2 flex items-center justify-center gap-1 bg-gray-200 rounded-md hover:bg-gray-300"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300 text-sm sm:text-base"
             >
-              <ChevronLeft size={20} />
-              Back
+              <ChevronLeft size={18} />
+              <span className="hidden sm:inline">Back</span>
             </button>
-          </div>
 
-          <div className="flex-1 min-w-0 text-center">
-            <h2 className="text-2xl font-bold text-gray-800">
-              {isManager ? "Manage OFF Requests" : "My OFF Requests"}
-            </h2>
-            <p className="text-gray-600 mt-1 truncate">
-              {isManager
-                ? "Review and approve time off requests from your team"
-                : "View and manage your time off requests"}
-            </p>
-          </div>
-
-          <div className="min-w-24 flex justify-end">
             {!isManager && (
               <button
-                className="pl-3 pr-4 py-2 bg-red-500 rounded-md hover:bg-red-600 text-white"
+                className="px-3 py-2 bg-red-500 rounded-md hover:bg-red-600 text-white text-sm sm:text-base whitespace-nowrap"
                 onClick={() => setIsRequestOffModalOpen(true)}
               >
                 Request OFF
               </button>
             )}
           </div>
+
+          {/* Title and description */}
+          <div className="text-center">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
+              {isManager ? "Manage OFF Requests" : "My OFF Requests"}
+            </h2>
+            <p className="text-gray-600 text-sm sm:text-base">
+              {isManager
+                ? "Review and approve time off requests from your team"
+                : "View and manage your time off requests"}
+            </p>
+          </div>
         </div>
 
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-2 sm:space-x-4">
             <button
               onClick={() => handleTabChange("pending")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-sm ${
                 activeTab === "pending"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -559,7 +596,7 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
             </button>
             <button
               onClick={() => handleTabChange("history")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-sm ${
                 activeTab === "history"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -570,25 +607,27 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
           </nav>
         </div>
 
-        {/* Table Content */}
+        {/* Content */}
         <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
-          {/* Table Header */}
-          <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-            <div className="grid grid-cols-12 gap-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+          {/* Desktop Table Header - Hidden on mobile */}
+          <div className="hidden md:block bg-gray-50 px-6 py-3 border-b border-gray-200">
+            <div
+              className={`grid ${
+                isManager ? "grid-cols-11" : "grid-cols-10"
+              } gap-4 text-xs font-medium text-gray-500 uppercase tracking-wider`}
+            >
               {isManager && <div className="col-span-2">Worker</div>}
               <div className={isManager ? "col-span-2" : "col-span-3"}>
                 Date(s)
               </div>
               <div className="col-span-2">Time</div>
-              <div className={isManager ? "col-span-2" : "col-span-3"}>
-                Reason
-              </div>
+              <div className="col-span-1">Reason</div>
               <div className="col-span-2">Status</div>
               <div className="col-span-2">Actions</div>
             </div>
           </div>
 
-          {/* Table Body */}
+          {/* Content */}
           <div className="divide-y divide-gray-200">
             {paginatedRequests.length === 0 ? (
               <div className="px-6 py-12 text-center">
@@ -598,7 +637,7 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
                     ? "No pending requests"
                     : "No request history"}
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-gray-500 text-sm sm:text-base">
                   {activeTab === "pending"
                     ? isManager
                       ? "Pending requests will appear here when submitted by workers."
@@ -607,97 +646,94 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
                     ? "Approved, denied, and auto-approved requests will appear here."
                     : "Your approved, denied, and auto-approved requests will appear here."}
                 </p>
+                {activeTab === "pending" && (
+                  <p
+                    onClick={() => handleTabChange("history")}
+                    className="text-blue-600 cursor-pointer mt-4 hover:underline"
+                  >
+                    See Request History
+                  </p>
+                )}
               </div>
             ) : (
               paginatedRequests.map((request) => (
-                <div key={request.id} className="px-6 py-2 hover:bg-gray-50">
-                  <div className="grid grid-cols-12 gap-4 items-center">
-                    {/* Worker - Only show for managers */}
-                    {isManager && (
-                      <div className="col-span-2">
-                        <div className="text-sm font-medium text-gray-900">
-                          {request.workerName}
+                <div key={request.id} className="hover:bg-gray-50">
+                  {/* Mobile Card Layout */}
+                  <div className="md:hidden p-4 space-y-3">
+                    {/* Header with status and date */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        {/* Worker info (for managers) */}
+                        {isManager && (
+                          <div className=" font-medium text-gray-900">
+                            {request.workerName}
+                          </div>
+                        )}
+                        <div className="text-sm font-medium text-gray-900 mb-1">
+                          {formatDateRange(request.startDate, request.endDate)}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {request.workerEmail}
+                        <div className="text-sm text-gray-600">
+                          {request.isAllDay
+                            ? "All Day"
+                            : `${formatTime(request.startTime)} - ${formatTime(
+                                request.endTime
+                              )}`}
                         </div>
                       </div>
-                    )}
-
-                    {/* Date(s) */}
-                    <div className={isManager ? "col-span-2" : "col-span-3"}>
-                      <div className="text-sm text-gray-900">
-                        {formatDate(request.startDate)}
-                        {request.endDate &&
-                          request.endDate !== request.startDate && (
-                            <div> to {formatDate(request.endDate)}</div>
+                      <div className="flex flex-col items-end gap-2 ml-3">
+                        {/* Status badge and auto-approved tag */}
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(request.status)}
+                          {request.isAutoApproved && (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                              Auto
+                            </span>
                           )}
-                      </div>
-                    </div>
+                        </div>
 
-                    {/* Time */}
-                    <div className="col-span-2">
-                      <div className="text-sm text-gray-900">
-                        {request.isAllDay
-                          ? "All Day"
-                          : `${formatTime(request.startTime)} - ${formatTime(
-                              request.endTime
-                            )}`}
+                        {/* History details */}
+                        <div>
+                          {activeTab === "history" && (
+                            <div className="text-xs text-gray-500 space-y-1">
+                              {request.approvedAt && (
+                                <div>
+                                  Approved:{" "}
+                                  {new Date(
+                                    request.approvedAt
+                                  ).toLocaleDateString()}
+                                </div>
+                              )}
+                              {request.deniedAt && (
+                                <div>
+                                  Denied:{" "}
+                                  {new Date(
+                                    request.deniedAt
+                                  ).toLocaleDateString()}
+                                </div>
+                              )}
+                              {request.retractedAt && (
+                                <div>
+                                  Retracted:{" "}
+                                  {new Date(
+                                    request.retractedAt
+                                  ).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     {/* Reason */}
-                    <div className={isManager ? "col-span-2" : "col-span-3"}>
-                      <div
-                        className="text-sm text-gray-900 truncate"
-                        title={request.reason}
-                      >
-                        {request.reason || "-"}
+                    {request.reason && (
+                      <div className="text-sm text-gray-600 mt-1 italic">
+                        "{request.reason}"
                       </div>
-                    </div>
-
-                    {/* Status */}
-                    <div className="col-span-2">
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(request.status)}
-                        {request.isAutoApproved && (
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                            Auto
-                          </span>
-                        )}
-                      </div>
-                      {activeTab === "history" && (
-                        <div className="text-xs text-gray-500 mt-1 flex flex-col gap-1">
-                          {request.approvedAt && (
-                            <div>
-                              Approved:{" "}
-                              {new Date(
-                                request.approvedAt
-                              ).toLocaleDateString()}
-                            </div>
-                          )}
-
-                          {request.deniedAt && (
-                            <div>
-                              Denied:{" "}
-                              {new Date(request.deniedAt).toLocaleDateString()}
-                            </div>
-                          )}
-
-                          {request.retractedAt && (
-                            <div>
-                              Retracted:{" "}
-                              {new Date(
-                                request.retractedAt
-                              ).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    )}
 
                     {/* Actions */}
-                    <div className="col-span-2">
+                    <div className="pt-2 border-t border-gray-100">
                       {isManager ? (
                         // Manager actions
                         request.status === "pending" ||
@@ -710,7 +746,7 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
                                 processingRequest === request.id ||
                                 request.status === "denied"
                               }
-                              className={`px-2 py-1 text-xs rounded disabled:opacity-50 ${
+                              className={`flex-1 px-3 py-2 text-sm rounded disabled:opacity-50 ${
                                 request.status === "denied"
                                   ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                                   : "bg-red-100 text-red-700 hover:bg-red-200"
@@ -726,7 +762,7 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
                                 processingRequest === request.id ||
                                 request.status === "approved"
                               }
-                              className={`px-2 py-1 text-xs rounded disabled:opacity-50 ${
+                              className={`flex-1 px-3 py-2 text-sm rounded disabled:opacity-50 ${
                                 request.status === "approved"
                                   ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                                   : "bg-green-100 text-green-700 hover:bg-green-200"
@@ -738,7 +774,7 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
                             </button>
                           </div>
                         ) : (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-sm text-gray-500 text-center py-2">
                             {request.status === "retracted"
                               ? "Retracted by worker"
                               : request.approvedBy === "system"
@@ -751,24 +787,26 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
                         <button
                           onClick={() => handleDeleteRequest(request)}
                           disabled={processingRequest === request.id}
-                          className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 flex items-center gap-1"
-                          title="Delete request"
+                          className="w-full px-3 py-2 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                          <Trash2 size={12} />
-                          {processingRequest === request.id ? "..." : "Delete"}
+                          <Trash2 size={16} />
+                          {processingRequest === request.id
+                            ? "..."
+                            : "Delete Request"}
                         </button>
                       ) : request.status === "approved" ? (
                         <button
                           onClick={() => handleRetractRequest(request)}
                           disabled={processingRequest === request.id}
-                          className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200 disabled:opacity-50 flex items-center gap-1"
-                          title="Retract approved request"
+                          className="w-full px-3 py-2 text-sm bg-orange-100 text-orange-700 rounded hover:bg-orange-200 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                          <Undo2 size={12} />
-                          {processingRequest === request.id ? "..." : "Retract"}
+                          <Undo2 size={16} />
+                          {processingRequest === request.id
+                            ? "..."
+                            : "Retract Request"}
                         </button>
                       ) : (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-sm text-gray-500 text-center py-2">
                           {request.status === "retracted"
                             ? "Retracted by you"
                             : request.approvedBy === "system"
@@ -780,6 +818,193 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
                       )}
                     </div>
                   </div>
+
+                  {/* Desktop Table Row Layout */}
+                  <div className="hidden md:block px-6 py-2">
+                    <div
+                      className={`grid ${
+                        isManager ? "grid-cols-11" : "grid-cols-10"
+                      } gap-4 items-start`}
+                    >
+                      {/* Worker - Only show for managers */}
+                      {isManager && (
+                        <div className="col-span-2">
+                          <div className="text-sm font-medium text-gray-900">
+                            {request.workerName}
+                          </div>
+                          {/* <div className="text-sm text-gray-500">
+                            {request.workerEmail}
+                          </div> */}
+                        </div>
+                      )}
+
+                      {/* Date(s) */}
+                      <div className={isManager ? "col-span-2" : "col-span-3"}>
+                        <div className="text-sm text-gray-900">
+                          {formatDateRange(request.startDate, request.endDate)}
+                        </div>
+                      </div>
+
+                      {/* Time */}
+                      <div className="col-span-2">
+                        <div className="text-sm text-gray-900">
+                          {request.isAllDay
+                            ? "All Day"
+                            : `${formatTime(request.startTime)} - ${formatTime(
+                                request.endTime
+                              )}`}
+                        </div>
+                      </div>
+
+                      {/* Reason */}
+                      <div className="col-span-1">
+                        {request.reason ? (
+                          <div className="relative inline-block group">
+                            <FileText
+                              size={16}
+                              className="text-gray-500 hover:text-gray-700 cursor-help"
+                            />
+                            <div className="absolute left-0 bottom-full mb-2 w-48 max-w-[200px] p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 z-20 pointer-events-none">
+                              {request.reason}
+                              <div className="absolute top-full left-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </div>
+
+                      {/* Status */}
+                      <div className="col-span-2">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {getStatusBadge(request.status)}
+                          {request.isAutoApproved && (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                              Auto
+                            </span>
+                          )}
+                        </div>
+                        {activeTab === "history" && (
+                          <div className="text-xs text-gray-500 mt-1 flex flex-col gap-1">
+                            {request.approvedAt && (
+                              <div>
+                                Approved:{" "}
+                                {new Date(
+                                  request.approvedAt
+                                ).toLocaleDateString()}
+                              </div>
+                            )}
+
+                            {request.deniedAt && (
+                              <div>
+                                Denied:{" "}
+                                {new Date(
+                                  request.deniedAt
+                                ).toLocaleDateString()}
+                              </div>
+                            )}
+
+                            {request.retractedAt && (
+                              <div>
+                                Retracted:{" "}
+                                {new Date(
+                                  request.retractedAt
+                                ).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="col-span-2">
+                        {isManager ? (
+                          // Manager actions
+                          request.status === "pending" ||
+                          request.status === "approved" ||
+                          request.status === "denied" ? (
+                            <div className="flex gap-2 it">
+                              <button
+                                onClick={() => handleDenyRequest(request)}
+                                disabled={
+                                  processingRequest === request.id ||
+                                  request.status === "denied"
+                                }
+                                className={`px-2 py-1 text-xs rounded disabled:opacity-50 ${
+                                  request.status === "denied"
+                                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                    : "bg-red-100 text-red-700 hover:bg-red-200"
+                                }`}
+                              >
+                                {processingRequest === request.id
+                                  ? "..."
+                                  : "Deny"}
+                              </button>
+                              <button
+                                onClick={() => handleApproveRequest(request)}
+                                disabled={
+                                  processingRequest === request.id ||
+                                  request.status === "approved"
+                                }
+                                className={`px-2 py-1 text-xs rounded disabled:opacity-50 ${
+                                  request.status === "approved"
+                                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                    : "bg-green-100 text-green-700 hover:bg-green-200"
+                                }`}
+                              >
+                                {processingRequest === request.id
+                                  ? "..."
+                                  : "Approve"}
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-gray-500">
+                              {request.status === "retracted"
+                                ? "Retracted by worker"
+                                : request.approvedBy === "system"
+                                ? "Auto-approved"
+                                : "No actions available"}
+                            </div>
+                          )
+                        ) : // Worker actions
+                        request.status === "pending" ? (
+                          <button
+                            onClick={() => handleDeleteRequest(request)}
+                            disabled={processingRequest === request.id}
+                            className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 flex items-center gap-1"
+                            title="Delete request"
+                          >
+                            <Trash2 size={12} />
+                            {processingRequest === request.id
+                              ? "..."
+                              : "Delete"}
+                          </button>
+                        ) : request.status === "approved" ? (
+                          <button
+                            onClick={() => handleRetractRequest(request)}
+                            disabled={processingRequest === request.id}
+                            className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200 disabled:opacity-50 flex items-center gap-1"
+                            title="Retract approved request"
+                          >
+                            <Undo2 size={12} />
+                            {processingRequest === request.id
+                              ? "..."
+                              : "Retract"}
+                          </button>
+                        ) : (
+                          <div className="text-xs text-gray-500">
+                            {request.status === "retracted"
+                              ? "Retracted by you"
+                              : request.approvedBy === "system"
+                              ? "Auto-approved"
+                              : request.approvedBy
+                              ? "Manager approved"
+                              : "Manager denied"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))
             )}
@@ -788,82 +1013,124 @@ const OffRequestsPage = ({ user, company, onBack, isManager = false }) => {
 
         {/* Pagination */}
         {currentRequests.length > REQUESTS_PER_PAGE && (
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
+          <div className="mt-6 space-y-4">
+            {/* Results info */}
+            <div className="text-sm text-gray-700 text-center">
               Showing {startIndex + 1} to{" "}
               {Math.min(endIndex, currentRequests.length)} of{" "}
               {currentRequests.length} results
             </div>
-            <div className="flex gap-2">
+
+            {/* Pagination controls */}
+            <div className="flex items-center justify-center gap-2">
+              {/* Previous page */}
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Previous page"
               >
-                Previous
+                <ChevronLeft size={16} />
               </button>
 
               {/* Page numbers */}
               <div className="flex gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => {
-                    // Show first page, last page, current page, and pages around current page
-                    const showPage =
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1);
+                {/* Always show page 1 */}
+                <button
+                  onClick={() => handlePageChange(1)}
+                  className={`px-3 py-2 text-sm border rounded-md ${
+                    currentPage === 1
+                      ? "bg-blue-500 text-white border-blue-500"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  1
+                </button>
 
-                    if (!showPage && page === 2 && currentPage > 4) {
-                      return (
-                        <span
-                          key="ellipsis1"
-                          className="px-3 py-2 text-sm text-gray-500"
-                        >
-                          ...
-                        </span>
-                      );
-                    }
+                {/* Ellipsis before current page area if needed */}
+                {currentPage > 3 && (
+                  <span className="px-3 py-2 text-sm text-gray-500">...</span>
+                )}
 
-                    if (
-                      !showPage &&
-                      page === totalPages - 1 &&
-                      currentPage < totalPages - 3
-                    ) {
-                      return (
-                        <span
-                          key="ellipsis2"
-                          className="px-3 py-2 text-sm text-gray-500"
-                        >
-                          ...
-                        </span>
-                      );
-                    }
+                {/* Previous page number (if not 1 or 2) */}
+                {currentPage > 2 && currentPage !== 3 && (
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className="px-3 py-2 text-sm border rounded-md bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  >
+                    {currentPage - 1}
+                  </button>
+                )}
 
-                    if (!showPage) return null;
+                {/* Previous page number (if current is 3) */}
+                {currentPage === 3 && (
+                  <button
+                    onClick={() => handlePageChange(2)}
+                    className="px-3 py-2 text-sm border rounded-md bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  >
+                    2
+                  </button>
+                )}
 
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 text-sm border rounded-md ${
-                          page === currentPage
-                            ? "bg-blue-500 text-white border-blue-500"
-                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  }
+                {/* Current page (if not 1 or last) */}
+                {currentPage > 1 && currentPage < totalPages && (
+                  <button
+                    className="px-3 py-2 text-sm border rounded-md bg-blue-500 text-white border-blue-500"
+                    disabled
+                  >
+                    {currentPage}
+                  </button>
+                )}
+
+                {/* Next page number (if current is totalPages - 2) */}
+                {currentPage === totalPages - 2 && totalPages > 2 && (
+                  <button
+                    onClick={() => handlePageChange(totalPages - 1)}
+                    className="px-3 py-2 text-sm border rounded-md bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  >
+                    {totalPages - 1}
+                  </button>
+                )}
+
+                {/* Next page number (if not last or second to last) */}
+                {currentPage < totalPages - 1 &&
+                  currentPage !== totalPages - 2 && (
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      className="px-3 py-2 text-sm border rounded-md bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    >
+                      {currentPage + 1}
+                    </button>
+                  )}
+
+                {/* Ellipsis after current page area if needed */}
+                {currentPage < totalPages - 2 && (
+                  <span className="px-3 py-2 text-sm text-gray-500">...</span>
+                )}
+
+                {/* Always show last page (if more than 1 page) */}
+                {totalPages > 1 && (
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    className={`px-3 py-2 text-sm border rounded-md ${
+                      currentPage === totalPages
+                        ? "bg-blue-500 text-white border-blue-500"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {totalPages}
+                  </button>
                 )}
               </div>
 
+              {/* Next page */}
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Next page"
               >
-                Next
+                <ChevronRight size={16} />
               </button>
             </div>
           </div>

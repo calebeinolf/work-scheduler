@@ -1174,7 +1174,7 @@ const ScheduleView = ({
   };
 
   return (
-    <div className="pb-24">
+    <div className={`${isManager ? "pb-24" : "pb-12"}`}>
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -1210,9 +1210,9 @@ const ScheduleView = ({
           onApproveOffRequest={handleApproveOffRequest}
         />
       )}
-      {/* Date & Arrows - Fixed layout to prevent CLS */}
+      {/* Date & Arrows - Desktop version (>450px) */}
       <div
-        className="max-w-6xl mx-auto flex justify-between items-center mb-4"
+        className="max-w-6xl mx-auto  justify-between items-center mb-4 hidden min-[450px]:flex"
         style={{ minHeight: "48px" }}
       >
         <div className="flex items-center gap-2" style={{ minWidth: "120px" }}>
@@ -1234,7 +1234,7 @@ const ScheduleView = ({
           </button>
         </div>
 
-        <h3 className="week-title text-2xl font-medium text-center flex-1">
+        <h3 className="week-title  text-2xl font-medium text-center flex-1">
           {formatWeekRange(weekStartDate, weekEndDate)}
         </h3>
 
@@ -1260,16 +1260,66 @@ const ScheduleView = ({
           </button>
         </div>
       </div>
+
+      {/* Mobile Date & Arrows (≤450px) */}
+      <div
+        className="max-w-6xl mx-auto  justify-between items-center mb-4 max-[450px]:flex hidden"
+        style={{ minHeight: "48px" }}
+      >
+        <h3 className="week-title text-2xl font-medium">
+          {formatWeekRange(weekStartDate, weekEndDate)}
+        </h3>
+
+        <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleWeekChange(-1)}
+              className="nav-button h-9 w-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
+            >
+              <ChevronLeft width={19} />
+            </button>
+
+            {!isCurrentWeek && weekStartDate >= getSundayOfWeek(new Date()) && (
+              <button
+                className={`nav-button h-9 w-9 flex items-center justify-center gap-2 text-blue-500 bg-blue-100 rounded-full fade-transition`}
+                onClick={handleGoToCurrentWeek}
+              >
+                <ChevronsLeft width={19} />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {!isCurrentWeek && weekStartDate <= getSundayOfWeek(new Date()) && (
+              <button
+                className={`nav-button h-9 w-9 flex items-center justify-center gap-2 text-blue-500 bg-blue-100 rounded-full fade-transition`}
+                onClick={handleGoToCurrentWeek}
+              >
+                <ChevronsRight width={19} />
+              </button>
+            )}
+
+            <button
+              onClick={() => handleWeekChange(1)}
+              className="nav-button h-9 w-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
+            >
+              <ChevronRight width={19} />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* No Schedule Published Message */}
       {!isManager && !scheduleLoading && !isPublished && (
-        <div className="text-center p-6 bg-amber-100 rounded-lg text-amber-600">
-          <h2 className="text-lg font-medium flex items-center justify-center gap-2">
-            <Clock strokeWidth={2.5} width={18} /> Schedule not published yet.
+        <div className="text-center p-4 min-[400px]:p-6 bg-amber-100/65 rounded-lg text-amber-600">
+          <h2 className="text-lg font-medium">
+            <div className="flex flex-col items-center justify-center min-[400px]:gap-2 min-[400px]:flex-row">
+              <Clock strokeWidth={2.5} width={18} />
+              <span>Schedule not published yet.</span>
+            </div>
           </h2>
           <p className="text-sm">You can still see scheduled OFF days.</p>
         </div>
       )}
-
       {/* Personal Schedule Row for Current Worker */}
       {!isManager && currentUserId && (
         <PersonalScheduleRow
@@ -1280,7 +1330,6 @@ const ScheduleView = ({
           scheduleLoading={scheduleLoading}
         />
       )}
-
       {/* Header */}
       <div className="sticky top-0 z-10">
         {/* Bulk Actions Bar - Reserve space to prevent layout shift */}
@@ -1308,10 +1357,16 @@ const ScheduleView = ({
         <div
           ref={headerContainerRef}
           className="overflow-x-auto no-scrollbar sticky top-0 z-10 shadow-md"
+          onMouseLeave={() => {
+            setHoveredCell({ row: null, col: null });
+          }}
         >
           <table
             className="schedule-table w-full border-collapse"
             style={{ tableLayout: "fixed" }}
+            onMouseLeave={() => {
+              setHoveredCell({ row: null, col: null });
+            }}
           >
             <thead>{renderWeekHeader()}</thead>
           </table>
@@ -1329,7 +1384,6 @@ const ScheduleView = ({
           <div style={{ height: "1px" }}></div>
         </div>
       </div>
-
       {/* Schedule Table */}
       <div className="overflow-x-auto" ref={mainContentRef}>
         <table
@@ -1457,7 +1511,6 @@ const ScheduleView = ({
           )}
         </table>
       </div>
-
       {/* Key */}
       <div className="w-full mt-8 mb-2 flex flex-wrap gap-4 items-center justify-center text-xs text-gray-600">
         <span>
@@ -1487,7 +1540,6 @@ const ScheduleView = ({
           onClear={() => setActivePreset(null)}
         />
       )}
-
       <div className="flex items-center justify-center mt-8">
         <div className="px-3 p-1 rounded-lg flex items-center no-wrap gap-2 bg-gray-100 inset-shadow-sm">
           <span className="text-sm text-nowrap font-semibold text-gray-600">

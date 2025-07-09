@@ -237,7 +237,7 @@ const WorkerRow = ({
 
                 {/* Show dash if no content */}
                 {(!Array.isArray(dayShifts) || dayShifts.length === 0) &&
-                  (!isManager || pendingRequests.length === 0) && (
+                  pendingRequests.length === 0 && (
                     <span className="text-gray-400">-</span>
                   )}
               </div>

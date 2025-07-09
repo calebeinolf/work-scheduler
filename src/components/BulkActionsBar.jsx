@@ -78,13 +78,14 @@ const BulkActionsBar = ({
               <button
                 onClick={handleUndo}
                 disabled={!canUndo}
-                className={`flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50 ${
+                className={`flex items-center justify-center gap-1 px-3 sm:px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50 ${
                   canUndo ? "hover:bg-gray-100" : "!cursor-default"
                 }`}
                 onMouseEnter={handleUndoMouseEnter}
                 onMouseLeave={handleUndoMouseLeave}
               >
-                <Undo2 width={15} /> Undo
+                <Undo2 width={15} />{" "}
+                <span className="hidden sm:inline">Undo</span>
               </button>
               {undoTooltip && (
                 <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-gray-800 text-white text-xs rounded px-2 py-1 z-50 whitespace-nowrap pointer-events-none">
@@ -96,13 +97,14 @@ const BulkActionsBar = ({
               <button
                 onClick={handleRedo}
                 disabled={!canRedo}
-                className={`flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50 ${
+                className={`flex items-center justify-center gap-1 px-3 sm:px-2 h-7 text-sm rounded-md bg-white disabled:opacity-50 ${
                   canRedo ? "hover:bg-gray-100" : "!cursor-default"
                 }`}
                 onMouseEnter={handleRedoMouseEnter}
                 onMouseLeave={handleRedoMouseLeave}
               >
-                Redo <Redo2 width={15} />
+                <span className="hidden sm:inline">Redo</span>{" "}
+                <Redo2 width={15} />
               </button>
               {redoTooltip && (
                 <div className="absolute left-1/2 -translate-x-1/2 -top-8 bg-gray-800 text-white text-xs rounded px-2 py-1 z-50 whitespace-nowrap pointer-events-none">
@@ -155,33 +157,36 @@ const BulkActionsBar = ({
           <>
             <button
               onClick={onPrint}
-              className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-white hover:bg-gray-100"
+              className="flex items-center justify-center gap-1 px-3 sm:px-2 h-7 text-sm rounded-md bg-white hover:bg-gray-100"
             >
-              <Printer width={15} /> Print
+              <Printer width={15} />{" "}
+              <span className="hidden sm:inline">Print</span>
             </button>
             {!isPublished ? (
               <button
                 onClick={onPublish}
-                className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-green-600 text-white hover:bg-green-700"
+                className="flex items-center justify-center gap-1 px-3 sm:px-2 h-7 text-sm rounded-md bg-green-600 text-white hover:bg-green-700"
               >
-                <Send width={15} /> Publish
+                <Send width={15} className="hidden sm:inline" /> Publish
               </button>
             ) : (
               <div className="flex items-center gap-2">
                 <button
                   onClick={onPublishChanges}
                   disabled={!hasUnpublishedChanges}
-                  className={`flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-blue-500 text-white  disabled:opacity-50 disabled:!cursor-default ${
+                  className={`flex items-center justify-center gap-1 px-3 sm:px-2 h-7 text-sm rounded-md bg-blue-500 text-white  disabled:opacity-50 disabled:!cursor-default ${
                     hasUnpublishedChanges ? "hover:bg-blue-600" : ""
                   }`}
                 >
-                  <CloudUpload width={15} /> Publish Changes
+                  <CloudUpload width={15} />{" "}
+                  <span className="hidden sm:inline">Publish Changes</span>
                 </button>
                 <button
                   onClick={onUnpublish}
-                  className="flex items-center justify-center gap-1 px-2 h-7 text-sm rounded-md bg-gray-600 text-white hover:bg-gray-700"
+                  className="flex items-center justify-center gap-1 px-3 sm:px-2 h-7 text-sm rounded-md bg-gray-600 text-white hover:bg-gray-700"
                 >
-                  <EyeOff width={15} /> Unpublish
+                  <EyeOff width={15} className="hidden sm:inline" />
+                  Unpublish
                 </button>
               </div>
             )}

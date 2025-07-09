@@ -386,7 +386,7 @@ const RequestOffModal = ({ isOpen, onClose, user, company }) => {
                   const diffDays = Math.ceil(
                     (start - today) / (1000 * 60 * 60 * 24)
                   );
-                  if (diffDays < 14 && diffDays >= 0) {
+                  if (diffDays <= 14 && diffDays >= 0) {
                     return (
                       <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
                         <p className="text-sm text-amber-800">
@@ -396,7 +396,7 @@ const RequestOffModal = ({ isOpen, onClose, user, company }) => {
                         </p>
                       </div>
                     );
-                  } else if (diffDays >= 14) {
+                  } else if (diffDays > 14) {
                     return (
                       <div className="bg-green-50 border border-green-200 rounded-md p-3">
                         <p className="text-sm text-green-800">

@@ -30,7 +30,7 @@ import {
   FileText,
 } from "lucide-react";
 import { getSundayOfWeek } from "../utils/scheduleUtils";
-import RequestOffModal from "./RequestOffModal";
+import RequestOffModal from "../components/RequestOffModal";
 
 // Configuration constants
 const REQUESTS_PER_PAGE = 20;

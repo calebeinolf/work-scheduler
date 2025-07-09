@@ -5,7 +5,7 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase"; // Corrected import path
 import ScheduleView from "./ScheduleView";
 import RequestOffModal from "./RequestOffModal";
-import OffRequestsPage from "./OffRequestsPage";
+import OffRequestsPage from "../pages/OffRequestsPage";
 import Loader from "../assets/Loader";
 import { Menu, X } from "lucide-react";
 

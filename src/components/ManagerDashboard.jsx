@@ -6,7 +6,7 @@ import { db } from "../firebase";
 import ScheduleView from "./ScheduleView";
 import AddWorkerModal from "./AddWorkerModal";
 import EditPresetsModal from "./EditPresetsModal";
-import OffRequestsPage from "./OffRequestsPage";
+import OffRequestsPage from "../pages/OffRequestsPage";
 import Loader from "../assets/Loader";
 import { Menu, X } from "lucide-react";
 

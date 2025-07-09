@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebase";
 import Loader from "../assets/Loader";
+import { Navigate } from "react-router-dom";
 
 const HomePage = () => {
   // Add state to track the user's authentication status.
@@ -27,6 +28,11 @@ const HomePage = () => {
     // Cleanup the listener when the component unmounts
     return () => unsubscribe();
   }, []); // The empty array ensures this effect runs only once.
+
+  // Redirect to dashboard if logged in
+  if (authStatus === "loggedIn") {
+    return <Navigate to="/schedule" replace />;
+  }
 
   // Determine where the "Log In" button should lead.
   const loginDestination = authStatus === "loggedIn" ? "/schedule" : "/login";

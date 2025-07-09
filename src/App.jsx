@@ -1,5 +1,3 @@
-// src/App.jsx
-
 import React, { Suspense } from "react";
 import {
   BrowserRouter as Router,
@@ -8,6 +6,8 @@ import {
   Navigate,
 } from "react-router-dom";
 import Loader from "./assets/Loader";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Lazy load all page components for better code splitting
 const LandingPage = React.lazy(() => import("./pages/LandingPage"));
@@ -20,23 +20,31 @@ const HomePage = React.lazy(() => import("./pages/HomePage"));
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* --- Core App Routes --- */}
-        {/* The root path now attempts to load the Dashboard */}
-        <Route path="/" element={<HomePage />} />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* --- Public Routes --- */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/join-company" element={<JoinCompanyPage />} />
+          <Route path="/create-company" element={<CreateCompanyPage />} />
 
-        {/* --- Onboarding and Auth Routes --- */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/create-company" element={<CreateCompanyPage />} />
-        <Route path="/join-company" element={<JoinCompanyPage />} />
-        <Route path="/schedule" element={<Dashboard />} />
+          {/* --- Protected Routes --- */}
+          <Route
+            path="/schedule"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Fallback route - could redirect to landing or a 404 page */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Fallback route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

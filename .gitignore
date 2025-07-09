@@ -14,7 +14,8 @@ dist-ssr
 .env
 .env.development
 .env.production
-.firebase 
+.firebase
+firebase-rules.txt
 
 # Editor directories and files
 .vscode/*

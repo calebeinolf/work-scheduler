@@ -13,6 +13,20 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
   const scrollContainerRef = useRef(null); // For auto-scrolling
   const shiftTypes = ["GUARD", "MANAGER", "FRONT", "LESSONS", "CAMP"];
 
+  // Prevent body scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Store original overflow style
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = "hidden";
+
+      // Cleanup function to restore original overflow
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen || !companyId) return;
 

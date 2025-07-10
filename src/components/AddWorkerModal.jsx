@@ -1,6 +1,6 @@
 // src/components/AddWorkerModal.jsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -13,6 +13,20 @@ const AddWorkerModal = ({ isOpen, onClose, companyId }) => {
   const [isMinor, setIsMinor] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Prevent body scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Store original overflow style
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = "hidden";
+
+      // Cleanup function to restore original overflow
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

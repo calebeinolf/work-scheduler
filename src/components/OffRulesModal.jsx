@@ -36,6 +36,20 @@ const OffRulesModal = ({ worker, company, isOpen, onClose }) => {
     }
   }, [worker]);
 
+  // Prevent body scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Store original overflow style
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = "hidden";
+
+      // Cleanup function to restore original overflow
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [isOpen]);
+
   const addOffRule = () => {
     const newRule = {
       id: crypto.randomUUID(),

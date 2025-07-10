@@ -9,17 +9,6 @@ const SignUp = () => {
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Get Started</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Create Company Card */}
-          <Link
-            to="/create-company"
-            className="block p-8 bg-white rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
-          >
-            <h2 className="text-2xl font-bold text-blue-600">Create Company</h2>
-            <p className="mt-2 text-gray-500">
-              For the Manager. Start building your company's schedule.
-            </p>
-          </Link>
-
           {/* Join Company Card */}
           <Link
             to="/join-company"
@@ -29,6 +18,17 @@ const SignUp = () => {
             <p className="mt-2 text-gray-500">
               For Workers. Use your email and a company code to access your
               schedule.
+            </p>
+          </Link>
+
+          {/* Create Company Card */}
+          <Link
+            to="/create-company"
+            className="block p-8 bg-white rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+          >
+            <h2 className="text-2xl font-bold text-blue-600">Create Company</h2>
+            <p className="mt-2 text-gray-500">
+              For the Manager. Start building your company's schedule.
             </p>
           </Link>
         </div>

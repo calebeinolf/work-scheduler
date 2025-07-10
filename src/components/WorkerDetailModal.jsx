@@ -1,6 +1,6 @@
 // src/components/WorkerDetailModal.jsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Pencil, Calendar } from "lucide-react";
 import OffRulesModal from "./OffRulesModal";
 
@@ -13,6 +13,21 @@ const WorkerDetailModal = ({
   isManager,
 }) => {
   const [isOffRulesModalOpen, setIsOffRulesModalOpen] = useState(false);
+
+  // Prevent body scrolling when modal is open
+  useEffect(() => {
+    if (worker) {
+      // Store original overflow style
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = "hidden";
+
+      // Cleanup function to restore original overflow
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [worker]);
+
   if (!worker) return null;
 
   return (

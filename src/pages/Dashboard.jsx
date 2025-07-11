@@ -25,6 +25,31 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const handleLogout = async (isAccountUnlinked = false) => {
+    try {
+      await signOut(auth);
+      // Clear the hash to prevent it from being used on the login page or by the next user
+      window.location.hash = "";
+
+      if (isAccountUnlinked) {
+        // If the account was unlinked, navigate with a flag to show appropriate message
+        navigate("/login", {
+          state: {
+            message:
+              "Your account has been updated by a manager. Please log in with your new credentials.",
+            type: "info",
+          },
+        });
+      } else {
+        navigate("/login");
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Force navigation even if logout fails
+      navigate("/login");
+    }
+  };
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (!user) {
@@ -44,9 +69,14 @@ const Dashboard = () => {
         (querySnapshot) => {
           if (querySnapshot.empty) {
             // No profile exists for this authenticated user.
-            // This can happen if they sign up but don't select a role.
+            // This could happen if:
+            // 1. They sign up but don't select a role
+            // 2. A manager changed their email, unlinking their account
+            console.log(
+              "No user profile found for authenticated user. Logging out to prevent navigation loop."
+            );
             setLoading(false);
-            navigate("/role-selection");
+            handleLogout(true); // Pass true to indicate account was unlinked
             return;
           }
 
@@ -96,13 +126,6 @@ const Dashboard = () => {
 
     return () => unsubscribeAuth();
   }, [navigate]);
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    // Clear the hash to prevent it from being used on the login page or by the next user
-    window.location.hash = "";
-    navigate("/login");
-  };
 
   const renderContent = () => {
     if (loading)

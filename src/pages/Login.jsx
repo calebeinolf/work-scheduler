@@ -1,8 +1,8 @@
 // src/pages/Login.jsx
 
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import Loader from "../assets/Loader";
@@ -11,12 +11,28 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if we received a message from the Dashboard (account unlinked scenario)
+  useEffect(() => {
+    if (location.state?.message) {
+      if (location.state.type === "info") {
+        setInfo(location.state.message);
+      } else {
+        setError(location.state.message);
+      }
+      // Clear the state so the message doesn't persist on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setInfo("");
 
     try {
       const userCredential = await signInWithEmailAndPassword(
@@ -41,12 +57,39 @@ const Login = () => {
         navigate("/schedule");
       } else {
         // No profile found. This auth account hasn't been linked.
-        // Send them to role selection to start the process.
-        navigate("/role-selection");
+        // This could happen if:
+        // 1. They just signed up and haven't selected a role yet
+        // 2. A manager changed their email, unlinking their account
+
+        // Sign them out and show a specific error message
+        await signOut(auth);
+        setError(
+          "This account is not linked to any profile. If a manager recently changed your email, please contact them for your new login credentials."
+        );
       }
     } catch (err) {
-      setError("Failed to log in. Please check your credentials.");
       console.error("Failed to log in:", err);
+
+      // Provide specific error messages based on Firebase error codes
+      switch (err.code) {
+        case "auth/user-not-found":
+          setError("No account found with this email address.");
+          break;
+        case "auth/wrong-password":
+          setError("Incorrect password.");
+          break;
+        case "auth/invalid-email":
+          setError("Invalid email address.");
+          break;
+        case "auth/user-disabled":
+          setError("This account has been disabled.");
+          break;
+        case "auth/too-many-requests":
+          setError("Too many failed attempts. Please try again later.");
+          break;
+        default:
+          setError("Failed to log in. Please check your credentials.");
+      }
     }
   };
 
@@ -58,6 +101,12 @@ const Login = () => {
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
           Log In
         </h2>
+
+        {info && (
+          <p className="bg-blue-100 text-blue-700 p-3 rounded-md mb-4 text-center">
+            {info}
+          </p>
+        )}
 
         {error && (
           <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4 text-center">

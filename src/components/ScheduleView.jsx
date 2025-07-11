@@ -1234,9 +1234,16 @@ const ScheduleView = ({
           </button>
         </div>
 
-        <h3 className="week-title  text-2xl font-medium text-center flex-1">
-          {formatWeekRange(weekStartDate, weekEndDate)}
-        </h3>
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <h3 className="week-title  text-2xl font-medium text-center ">
+            {formatWeekRange(weekStartDate, weekEndDate)}
+          </h3>
+          {isCurrentWeek && (
+            <p className="-mt-1 text-sm font-medium text-blue-500">
+              Current Week
+            </p>
+          )}
+        </div>
 
         <div
           className="flex items-center gap-2"
@@ -1266,9 +1273,16 @@ const ScheduleView = ({
         className="max-w-6xl mx-auto  justify-between items-center mb-4 max-[450px]:flex hidden"
         style={{ minHeight: "48px" }}
       >
-        <h3 className="week-title text-2xl font-medium">
-          {formatWeekRange(weekStartDate, weekEndDate)}
-        </h3>
+        <div className="flex flex-col justify-center">
+          <h3 className="week-title  text-2xl font-medium text-center ">
+            {formatWeekRange(weekStartDate, weekEndDate)}
+          </h3>
+          {isCurrentWeek && (
+            <p className="-mt-1 text-sm font-medium text-blue-500">
+              Current Week
+            </p>
+          )}
+        </div>
 
         <div className="flex items-center justify-center gap-2">
           <div className="flex items-center gap-2">
@@ -1490,7 +1504,7 @@ const ScheduleView = ({
                       key={worker.uid}
                       worker={worker}
                       scheduleData={displayScheduleData}
-                      onWorkerClick={isManager ? setSelectedWorker : () => {}}
+                      onWorkerClick={setSelectedWorker}
                       hoveredCell={hoveredCell}
                       popoverTarget={popoverTarget}
                       onCellEnter={setHoveredCell}

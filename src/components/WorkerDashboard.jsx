@@ -64,9 +64,9 @@ const WorkerDashboard = ({ user, company }) => {
         company={company}
       />
 
-      <div className="max-w-6xl mx-auto mb-6 ">
+      <div className="max-w-6xl mx-auto mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
         {/* Mobile layout with hamburger menu */}
-        <div className="block sm:hidden">
+        <div className="block md:hidden">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-800">
               Welcome, {user?.fullName && user.fullName.split(" ")[0]}!
@@ -81,7 +81,7 @@ const WorkerDashboard = ({ user, company }) => {
 
           {/* Mobile menu panel */}
           {isMenuOpen && (
-            <div className="mt-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row mt-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 gap-3">
               <button
                 onClick={() => {
                   setShowMyOffRequests(true);
@@ -105,7 +105,7 @@ const WorkerDashboard = ({ user, company }) => {
         </div>
 
         {/* Desktop layout */}
-        <div className="hidden sm:flex justify-between items-start gap-4">
+        <div className="hidden md:flex justify-between items-start gap-4">
           <div>
             <h2 className="text-xl font-semibold text-gray-800">
               Welcome, {user?.fullName && user.fullName.split(" ")[0]}!

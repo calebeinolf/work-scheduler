@@ -171,7 +171,7 @@ const WorkerRow = ({
                   pendingRequests.map((request, index) => (
                     <div
                       key={`pending-${index}`}
-                      className="text-xs text-gray-500 bg-gray-100 rounded px-1 py-0.5"
+                      className="text-xs font-medium text-white bg-red-400 rounded px-1 py-0.5"
                       title={`Pending OFF request: ${
                         request.reason || "No reason provided"
                       }`}

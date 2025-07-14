@@ -1,7 +1,7 @@
 // src/components/ShiftEditPopover.jsx
 
 import React, { useState, useEffect, useRef } from "react";
-import { Clock } from "lucide-react";
+import { Clock, X } from "lucide-react";
 import { formatTime12hr } from "../utils/scheduleUtils";
 
 const ShiftEditPopover = ({
@@ -281,12 +281,19 @@ const ShiftEditPopover = ({
                           </div>
                         )}
                     </div>
-                    <button
-                      onClick={() => onApproveOffRequest?.(request.id, request)}
-                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 rounded"
-                    >
-                      Approve
-                    </button>
+                    <div className="flex gap-1">
+                      <button className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 rounded">
+                        <X width={12} strokeWidth={3} />
+                      </button>
+                      <button
+                        onClick={() =>
+                          onApproveOffRequest?.(request.id, request)
+                        }
+                        className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 rounded"
+                      >
+                        Approve
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

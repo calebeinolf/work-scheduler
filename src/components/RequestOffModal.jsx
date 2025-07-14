@@ -72,6 +72,14 @@ const RequestOffModal = ({ isOpen, onClose, user, company }) => {
       // Check if request is 2+ weeks in advance
       const isAutoApproved = requestStartDate >= twoWeeksFromNow;
 
+      // Check if reason is required (for requests within 2 weeks)
+      if (!isAutoApproved && !reason.trim()) {
+        setError(
+          "A reason is required for requests made within 2 weeks of the requested date."
+        );
+        return;
+      }
+
       const userId = user.uid || user.id;
       // console.log("User object:", user);
       // console.log("Using user ID:", userId);
@@ -379,7 +387,18 @@ const RequestOffModal = ({ isOpen, onClose, user, company }) => {
                   htmlFor="reason"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Reason (optional)
+                  Reason{" "}
+                  {startDate &&
+                    (() => {
+                      const today = new Date();
+                      const start = new Date(startDate + "T00:00:00");
+                      const diffDays = Math.ceil(
+                        (start - today) / (1000 * 60 * 60 * 24)
+                      );
+                      return diffDays <= 14 && diffDays >= 0
+                        ? "*"
+                        : "(optional)";
+                    })()}
                 </label>
                 <input
                   id="reason"
@@ -389,6 +408,17 @@ const RequestOffModal = ({ isOpen, onClose, user, company }) => {
                   placeholder="Brief reason..."
                   className="p-2 border rounded w-full"
                   maxLength={200}
+                  required={
+                    startDate &&
+                    (() => {
+                      const today = new Date();
+                      const start = new Date(startDate + "T00:00:00");
+                      const diffDays = Math.ceil(
+                        (start - today) / (1000 * 60 * 60 * 24)
+                      );
+                      return diffDays <= 14 && diffDays >= 0;
+                    })()
+                  }
                 />
               </div>
 

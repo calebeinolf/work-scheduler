@@ -825,28 +825,44 @@ const ScheduleView = ({
         >
           YOS
         </th>
-        {days.map((dayKey, i) => (
-          <th
-            key={dayKey}
-            style={{ width: columnWidths.day, minWidth: columnWidths.day }}
-            className={`header-cell-padding border text-xs font-semibold text-gray-600 transition-colors duration-100 ${
-              hoveredCell.col === dayKey ? "bg-blue-100" : "bg-gray-100"
-            }`}
-            onMouseEnter={() => handleHeaderMouseEnter(dayKey)}
-          >
-            <div>{headerDates[i]}</div>
-            <div className="flex items-center justify-center gap-3">
-              <div className="text-blue-600 font-semibold text-xs">
-                {dailyStaffCounts[dayKey]?.GUARD || "0"}{" "}
-                <span className="font-medium"> G</span>
+        {days.map((dayKey, i) => {
+          const guardCount = parseInt(dailyStaffCounts[dayKey]?.GUARD || "0");
+          const isLowGuardCount = guardCount < 12;
+
+          const frontCount = parseInt(dailyStaffCounts[dayKey]?.FRONT || "0");
+          const isLowFrontCount = frontCount < 1;
+
+          return (
+            <th
+              key={dayKey}
+              style={{ width: columnWidths.day, minWidth: columnWidths.day }}
+              className={`header-cell-padding border text-xs font-semibold text-gray-600 transition-colors duration-100 ${
+                hoveredCell.col === dayKey ? "bg-blue-100" : "bg-gray-100"
+              }`}
+              onMouseEnter={() => handleHeaderMouseEnter(dayKey)}
+            >
+              <div>{headerDates[i]}</div>
+              <div className="flex items-center justify-center gap-3">
+                <div
+                  className={`font-semibold text-xs ${
+                    isLowGuardCount ? "text-red-600" : "text-blue-600"
+                  }`}
+                >
+                  {dailyStaffCounts[dayKey]?.GUARD || "0"}{" "}
+                  <span className="font-medium"> G</span>
+                </div>
+                <div
+                  className={`font-semibold text-xs ${
+                    isLowFrontCount ? "text-red-600" : "text-green-600"
+                  }`}
+                >
+                  {dailyStaffCounts[dayKey]?.FRONT || "0"}{" "}
+                  <span className="font-medium"> F</span>
+                </div>
               </div>
-              <div className="text-green-600 font-semibold text-xs">
-                {dailyStaffCounts[dayKey]?.FRONT || "0"}{" "}
-                <span className="font-medium"> F</span>
-              </div>
-            </div>
-          </th>
-        ))}
+            </th>
+          );
+        })}
         <th
           style={{ width: columnWidths.total, minWidth: columnWidths.total }}
           className={`header-cell-padding border text-xs font-semibold text-gray-600 transition-colors duration-100 ${

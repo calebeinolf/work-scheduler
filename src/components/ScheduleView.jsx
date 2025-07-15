@@ -929,7 +929,9 @@ const ScheduleView = ({
               <div className="flex items-center justify-center gap-3">
                 <div
                   className={`font-semibold text-xs ${
-                    isLowGuardCount ? "text-red-600" : "text-blue-600"
+                    isLowGuardCount
+                      ? "bg-red-500 text-white rounded px-1"
+                      : "text-blue-600"
                   }`}
                 >
                   {dailyStaffCounts[dayKey]?.GUARD || "0"}{" "}

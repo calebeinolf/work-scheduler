@@ -334,7 +334,7 @@ const OffRulesModal = ({ worker, company, isOpen, onClose }) => {
                     </h4>
                     <button
                       onClick={() => removeOffRule(rule.id)}
-                      className="text-red-500 hover:text-red-700 p-1"
+                      className="text-red-500 hover:text-red-700 p-1 !shadow-none"
                       title="Remove rule"
                     >
                       <Trash2 size={16} />

@@ -65,7 +65,7 @@ const BulkActionsBar = ({
 
   return (
     <div
-      className={`rounded-tl-lg border-t border-x rounded-tr-lg p-2 flex items-center justify-between bg-gray-500`}
+      className={`rounded-tl-lg border-t border-x border-gray-700 rounded-tr-lg p-2 flex items-center justify-between bg-gray-500`}
     >
       <div className="flex-1">
         {selectedWorkers.length > 0 ? (
@@ -165,7 +165,7 @@ const BulkActionsBar = ({
             {!isPublished ? (
               <button
                 onClick={onPublish}
-                className="flex items-center justify-center gap-1 px-3 sm:px-2 h-7 text-sm rounded-md bg-green-600 text-white hover:bg-green-700"
+                className="flex items-center justify-center gap-1 px-3 sm:px-2 h-7 text-sm rounded-md bg-green-500 text-white hover:bg-green-600"
               >
                 <Send width={15} className="hidden sm:inline" /> Publish
               </button>

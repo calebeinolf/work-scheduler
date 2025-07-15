@@ -196,7 +196,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       type="button"
                       onClick={() => handleReorder(index, "top")}
                       disabled={index === 0}
-                      className="p-1 text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 !shadow-none text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Move to top"
                     >
                       <svg
@@ -218,7 +218,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       type="button"
                       onClick={() => handleReorder(index, "up")}
                       disabled={index === 0}
-                      className="p-1 text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 !shadow-none text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Move up"
                     >
                       <svg
@@ -240,7 +240,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       type="button"
                       onClick={() => handleReorder(index, "down")}
                       disabled={index === presets.length - 1}
-                      className="p-1 text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 !shadow-none text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Move down"
                     >
                       <svg
@@ -262,7 +262,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
                       type="button"
                       onClick={() => handleReorder(index, "bottom")}
                       disabled={index === presets.length - 1}
-                      className="p-1 text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 !shadow-none text-gray-600 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Move to bottom"
                     >
                       <svg
@@ -331,7 +331,7 @@ const EditPresetsModal = ({ isOpen, onClose, companyId }) => {
 
                   <button
                     onClick={() => removePreset(preset.id)}
-                    className="ml-auto text-red-500 hover:text-red-700 text-xl self-start"
+                    className="ml-auto !shadow-none text-red-500 hover:text-red-700 text-xl self-start"
                     title="Delete Preset"
                   >
                     <Trash2 size={16} />

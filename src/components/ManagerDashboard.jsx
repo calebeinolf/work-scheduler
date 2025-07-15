@@ -83,7 +83,7 @@ const ManagerDashboard = ({ user, company }) => {
         companyId={company.id}
       />
 
-      <div className="max-w-6xl mx-auto mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+      <div className="max-w-6xl mx-auto mb-6 p-3  rounded-xl border bg-gray-50 border-gray-200 insetShadow">
         {/* Mobile layout with hamburger menu */}
         <div className="block md:hidden">
           <div className="flex justify-between items-center">
@@ -92,7 +92,7 @@ const ManagerDashboard = ({ user, company }) => {
             </h2>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-gray-600 hover:text-gray-800 focus:outline-none"
+              className="p-2 text-gray-600 hover:text-gray-800 focus:outline-none !shadow-none"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -115,7 +115,7 @@ const ManagerDashboard = ({ user, company }) => {
                   setIsAddWorkerModalOpen(true);
                   setIsMenuOpen(false);
                 }}
-                className="w-full bg-gray-200 hover:bg-gray-300 font-medium py-2 px-4 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
+                className="w-full bg-gray-200 hover:bg-gray-300 font-medium py-2 px-4 rounded-md text-sm focus:outline-none focus:shadow-outline"
               >
                 + Add Worker
               </button>
@@ -150,7 +150,7 @@ const ManagerDashboard = ({ user, company }) => {
             </button>
             <button
               onClick={() => setIsAddWorkerModalOpen(true)}
-              className="w-full bg-gray-200 hover:bg-gray-300 font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline transition duration-200"
+              className="w-full bg-gray-200 hover:bg-gray-300 font-medium text-nowrap py-1 px-3 rounded-md text-sm focus:outline-none focus:shadow-outline"
             >
               + Add Worker
             </button>

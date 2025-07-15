@@ -162,9 +162,9 @@ const Dashboard = () => {
     <div className="min-h-screen">
       <header className="bg-white shadow-sm px-6 py-2">
         <nav className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <img src={wdiwFavicon} alt="Company Logo" className="w-6 h-6" />
-            <h1 className="text-lg font-semibold text-blue-600">
+          <div className="flex items-center gap-2">
+            <img src={wdiwFavicon} alt="Company Logo" className="w-5 h-5" />
+            <h1 className=" font-semibold text-blue-600">
               {companyData ? companyData.name : ""}
             </h1>
           </div>
@@ -177,7 +177,7 @@ const Dashboard = () => {
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-gray-100 focus:outline-none"
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-gray-100 focus:outline-none !shadow-none transition duration-200"
                   title="Log Out"
                 >
                   <LogOut width={15} />

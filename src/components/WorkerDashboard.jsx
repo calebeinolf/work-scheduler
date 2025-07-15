@@ -64,7 +64,7 @@ const WorkerDashboard = ({ user, company }) => {
         company={company}
       />
 
-      <div className="max-w-6xl mx-auto mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+      <div className="max-w-6xl mx-auto mb-6 p-3 bg-gray-50 rounded-xl border border-gray-200 insetShadow">
         {/* Mobile layout with hamburger menu */}
         <div className="block md:hidden">
           <div className="flex justify-between items-center">

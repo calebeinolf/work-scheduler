@@ -11,6 +11,7 @@ const ShiftEditPopover = ({
   onClose,
   pendingOffRequests = [],
   onApproveOffRequest,
+  onDenyOffRequest,
 }) => {
   const { worker, initialShift } = targetCell;
   const [shifts, setShifts] = useState([]);
@@ -282,7 +283,10 @@ const ShiftEditPopover = ({
                         )}
                     </div>
                     <div className="flex gap-1">
-                      <button className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 rounded">
+                      <button
+                        onClick={() => onDenyOffRequest?.(request.id, request)}
+                        className="bg-red-500 hover:bg-red-600 text-white text-xs px-1 rounded"
+                      >
                         <X width={12} strokeWidth={3} />
                       </button>
                       <button

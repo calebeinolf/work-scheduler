@@ -609,6 +609,90 @@ const ScheduleView = ({
     }
   };
 
+  const handleDenyOffRequest = async (requestId, request) => {
+    try {
+      // If request is already approved, we need to remove the OFF shifts from schedules
+      if (request.status === "approved") {
+        // Remove OFF shifts from schedules
+        const startDate = new Date(request.startDate + "T00:00:00");
+        const endDate = new Date(
+          (request.endDate || request.startDate) + "T00:00:00"
+        );
+
+        const current = new Date(startDate);
+        const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+        while (current <= endDate) {
+          const dayIndex = current.getDay();
+          const dayKey = dayNames[dayIndex];
+
+          // Get the schedule data for this week
+          const sunday = getSundayOfWeek(current);
+          const scheduleDocId = `${company.id}_${sunday.getFullYear()}-${String(
+            sunday.getMonth() + 1
+          ).padStart(2, "0")}-${String(sunday.getDate()).padStart(2, "0")}`;
+
+          const scheduleDocRef = doc(db, "schedules", scheduleDocId);
+          const scheduleDoc = await getDoc(scheduleDocRef);
+
+          if (scheduleDoc.exists()) {
+            const scheduleData = scheduleDoc.data();
+            const shifts = scheduleData.shifts || {};
+
+            // Update the specific worker's day
+            const workerId = request.workerId;
+            if (
+              shifts[workerId] &&
+              shifts[workerId][dayKey] &&
+              Array.isArray(shifts[workerId][dayKey])
+            ) {
+              // Remove OFF shifts that were created by this specific request
+              const filteredShifts = shifts[workerId][dayKey].filter(
+                (shift) => {
+                  // Keep non-OFF shifts
+                  if (shift.type !== "OFF") return true;
+
+                  // Keep rule-based OFF shifts
+                  if (shift.isRule) return true;
+
+                  // Remove manageable OFF shifts (for safety, remove all non-rule OFF shifts)
+                  return false;
+                }
+              );
+
+              // If there are no shifts left, set to null to clean up
+              shifts[workerId][dayKey] =
+                filteredShifts.length > 0 ? filteredShifts : null;
+
+              // Update the schedule document
+              await setDoc(scheduleDocRef, { shifts }, { merge: true });
+            }
+          }
+
+          current.setDate(current.getDate() + 1);
+        }
+      }
+
+      // Update the request status in Firestore
+      await updateDoc(doc(db, "offRequests", requestId), {
+        status: "denied",
+        deniedAt: new Date().toISOString(),
+        deniedBy: "manager",
+        // Clear approved fields if it was previously approved
+        ...(request.status === "approved" && {
+          approvedAt: null,
+          approvedBy: null,
+        }),
+      });
+
+      // Close the popover
+      handleClosePopover();
+    } catch (error) {
+      console.error("Error denying off request:", error);
+      alert("Failed to deny off request. Please try again.");
+    }
+  };
+
   const handleWeekChange = (weeks) => {
     setCurrentDate((prevDate) => {
       const newDate = new Date(prevDate);
@@ -1224,6 +1308,7 @@ const ScheduleView = ({
             popoverTarget.day
           )}
           onApproveOffRequest={handleApproveOffRequest}
+          onDenyOffRequest={handleDenyOffRequest}
         />
       )}
       {/* Date & Arrows - Desktop version (>450px) */}
@@ -1286,11 +1371,11 @@ const ScheduleView = ({
 
       {/* Mobile Date & Arrows (≤450px) */}
       <div
-        className="max-w-6xl mx-auto  justify-between items-center mb-4 max-[450px]:flex hidden"
+        className="max-w-6xl mx-auto gap-2 justify-between items-center mb-4 max-[450px]:flex hidden"
         style={{ minHeight: "48px" }}
       >
         <div className="flex flex-col justify-center">
-          <h3 className="week-title  text-2xl font-medium text-center ">
+          <h3 className="week-title  text-2xl font-medium text-left ">
             {formatWeekRange(weekStartDate, weekEndDate)}
           </h3>
           {isCurrentWeek && (
@@ -1571,7 +1656,7 @@ const ScheduleView = ({
         />
       )}
       <div className="flex items-center justify-center mt-8">
-        <div className="px-3 p-1 rounded-lg flex items-center no-wrap gap-2 bg-gray-100 inset-shadow-sm">
+        <div className="px-3 p-1 rounded-lg flex items-center no-wrap gap-2 bg-gray-50 border border-gray-200 insetShadow">
           <span className="text-sm text-nowrap font-semibold text-gray-600">
             Join Code:
           </span>

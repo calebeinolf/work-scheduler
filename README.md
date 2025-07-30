@@ -1,5 +1,5 @@
 # Work Scheduler (When Do I Guard)
-At the moment, specifically made for scheduling lifeguards at the pool I work at. We used to use Google Sheets, which takes forever to schedule guards (adding up their hours, adding up haw many guards are working each day, etc.). Plus, we have to ask for days off using a paper - pretty inconvenient.
+At the moment, specifically made for scheduling lifeguards at the pool I work at. We used to use Google Sheets, which takes forever to schedule guards (adding up their hours, adding up how many guards are working each day, etc.). Plus, we have to ask for days off using a paper - pretty inconvenient.
 
 # About
 Managers can easily create schdeules, adding shifts to a spreadsheet-style view by clicking cells. Workers can view published schedules and request off.
